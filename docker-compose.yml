@@ -1,0 +1,24 @@
+services:
+  tubevault:
+    build: .
+    image: tubevault:latest
+    container_name: tubevault
+    ports:
+      - "8080:8080"
+    environment:
+      - TZ=Europe/Berlin
+      # UID/GID of the user that owns the download folder on the NAS (`id <user>`).
+      - PUID=1000
+      - PGID=1000
+      # Fetch the newest yt-dlp on every start (YouTube changes often).
+      - YTDLP_AUTO_UPDATE=true
+      # Behind a reverse proxy: its IP or network, e.g. 172.16.0.0/12. Needed for
+      # correct client IPs (login rate limit) and https detection (secure cookies).
+      # - FORWARDED_ALLOW_IPS=172.16.0.0/12
+      # Optional: create the admin account without the setup wizard.
+      # - ADMIN_USERNAME=admin
+      # - ADMIN_PASSWORD=change-me-please
+    volumes:
+      - ./config:/config
+      - /volume1/downloads/tubevault:/downloads
+    restart: unless-stopped

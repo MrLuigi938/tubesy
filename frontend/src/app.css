@@ -1,0 +1,150 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+:root {
+	--bg: #f6f7f9;
+	--surface: #ffffff;
+	--surface-2: #f0f2f5;
+	--border: #e2e5ea;
+	--text: #14161a;
+	--muted: #5d6470;
+	--accent: #d93a40;
+	--accent-hover: #c22f35;
+	--accent-soft: #fdecec;
+	--ok: #1a8a52;
+	--ok-soft: #e4f6ec;
+	--warn: #a86500;
+	--warn-soft: #fdf3e1;
+	--danger: #c9302c;
+	--danger-soft: #fdeceb;
+	--info: #2f6fe0;
+	--info-soft: #e8f0fd;
+	color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root:not([data-theme='light']) {
+		--bg: #0f1115;
+		--surface: #171a20;
+		--surface-2: #1f232b;
+		--border: #2a2f39;
+		--text: #e9ebef;
+		--muted: #98a0ad;
+		--accent: #ef5359;
+		--accent-hover: #f46b70;
+		--accent-soft: #3a1c1f;
+		--ok: #3fc483;
+		--ok-soft: #13301f;
+		--warn: #f0a83a;
+		--warn-soft: #34270f;
+		--danger: #f0605b;
+		--danger-soft: #3a1b1a;
+		--info: #6c9dff;
+		--info-soft: #18263f;
+		color-scheme: dark;
+	}
+}
+
+:root[data-theme='dark'] {
+	--bg: #0f1115;
+	--surface: #171a20;
+	--surface-2: #1f232b;
+	--border: #2a2f39;
+	--text: #e9ebef;
+	--muted: #98a0ad;
+	--accent: #ef5359;
+	--accent-hover: #f46b70;
+	--accent-soft: #3a1c1f;
+	--ok: #3fc483;
+	--ok-soft: #13301f;
+	--warn: #f0a83a;
+	--warn-soft: #34270f;
+	--danger: #f0605b;
+	--danger-soft: #3a1b1a;
+	--info: #6c9dff;
+	--info-soft: #18263f;
+	color-scheme: dark;
+}
+
+@theme inline {
+	--color-bg: var(--bg);
+	--color-surface: var(--surface);
+	--color-surface-2: var(--surface-2);
+	--color-border: var(--border);
+	--color-text: var(--text);
+	--color-muted: var(--muted);
+	--color-accent: var(--accent);
+	--color-accent-hover: var(--accent-hover);
+	--color-accent-soft: var(--accent-soft);
+	--color-ok: var(--ok);
+	--color-ok-soft: var(--ok-soft);
+	--color-warn: var(--warn);
+	--color-warn-soft: var(--warn-soft);
+	--color-danger: var(--danger);
+	--color-danger-soft: var(--danger-soft);
+	--color-info: var(--info);
+	--color-info-soft: var(--info-soft);
+	--font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+html,
+body {
+	background: var(--bg);
+	color: var(--text);
+	font-family: var(--font-sans);
+	-webkit-font-smoothing: antialiased;
+}
+
+@utility card {
+	@apply rounded-xl border border-border bg-surface;
+}
+@utility btn {
+	@apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+}
+@utility btn-primary {
+	@apply btn bg-accent text-white hover:bg-accent-hover;
+}
+@utility btn-secondary {
+	@apply btn border border-border bg-surface hover:bg-surface-2;
+}
+@utility btn-ghost {
+	@apply btn text-muted hover:bg-surface-2 hover:text-text;
+}
+@utility btn-danger {
+	@apply btn bg-danger text-white hover:opacity-90;
+}
+@utility btn-icon {
+	@apply inline-flex size-9 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-2 hover:text-text disabled:opacity-40;
+}
+@utility input {
+	@apply w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/25 focus:outline-none;
+}
+@utility label {
+	@apply mb-1.5 block text-sm font-medium;
+}
+@utility hint {
+	@apply mt-1 block text-xs font-normal text-muted;
+}
+@utility badge {
+	@apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium;
+}
+@utility table-wrap {
+	@apply overflow-x-auto;
+	& table {
+		@apply w-full text-left text-sm;
+	}
+	& th {
+		@apply border-b border-border px-4 py-2.5 text-xs font-semibold tracking-wide text-muted uppercase;
+	}
+	& td {
+		@apply border-b border-border px-4 py-3 align-middle;
+	}
+	& tr:last-child td {
+		@apply border-b-0;
+	}
+}
+
+input[type='checkbox'] {
+	accent-color: var(--accent);
+}
