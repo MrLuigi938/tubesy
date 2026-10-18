@@ -147,6 +147,21 @@ def test_cancel_running_download(client: TestClient, slow_url):
     client.post(f"/api/downloads/{d['id']}/cancel")
 
 
+def test_websocket_origin_check(client: TestClient):
+    from starlette.websockets import WebSocketDisconnect
+
+    login(client, ADMIN)
+    # Behind a proxy the Host header often lacks the port of the public origin.
+    with client.websocket_connect("/api/ws", headers={"origin": "https://testserver:8443"}) as ws:
+        ws.send_text("ping")
+    try:
+        with client.websocket_connect("/api/ws", headers={"origin": "https://evil.example"}) as ws:
+            ws.receive_text()
+        raise AssertionError("foreign origin was accepted")
+    except WebSocketDisconnect as exc:
+        assert exc.code == 4403
+
+
 def test_login_rate_limit(client: TestClient):
     client.cookies.clear()
     codes = [client.post("/api/auth/login", json={"username": "chef", "password": "falsch"}).status_code for _ in range(9)]

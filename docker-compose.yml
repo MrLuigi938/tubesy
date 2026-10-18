@@ -7,6 +7,8 @@ services:
     image: ghcr.io/mrluigi938/tubesy:${TUBESY_VERSION:-latest}
     container_name: tubesy
     restart: unless-stopped
+    # Direktzugriff im LAN (http://<nas-ip>:8080). Wenn Tubesy nur über SWAG
+    # erreichbar sein soll, diesen Block entfernen.
     ports:
       - "${TUBESY_PORT:-8080}:8080"
     environment:
@@ -16,11 +18,23 @@ services:
       PGID: ${PGID:-1000}
       # Bei jedem Start das neueste yt-dlp holen (YouTube ändert sich oft).
       YTDLP_AUTO_UPDATE: ${YTDLP_AUTO_UPDATE:-true}
-      # Hinter einem Reverse-Proxy dessen IP oder Netz eintragen, z. B. 172.16.0.0/12.
-      FORWARDED_ALLOW_IPS: ${FORWARDED_ALLOW_IPS:-127.0.0.1}
+      # Reverse-Proxy (SWAG): X-Forwarded-* wird nur aus Docker-Netzen akzeptiert.
+      # Damit sieht Tubesy die echte Client-IP (Login-Sperre) und erkennt HTTPS (sichere Cookies).
+      FORWARDED_ALLOW_IPS: ${FORWARDED_ALLOW_IPS:-172.16.0.0/12}
       # Optional: Admin-Konto ohne Einrichtungsassistent anlegen.
       ADMIN_USERNAME: ${ADMIN_USERNAME:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
     volumes:
       - ${CONFIG_PATH:-./config}:/config
       - ${DOWNLOAD_PATH:-./downloads}:/downloads
+    networks:
+      - swag_default
+    # Das Docker-Standardnetz "bridge" kann Compose nicht zusammen mit anderen Netzen
+    # anlegen (Docker-Einschränkung). Falls Tubesy zusätzlich dort hängen soll,
+    # einmalig nach dem Start ausführen:
+    #   docker network connect bridge tubesy
+
+networks:
+  # Netzwerk von SWAG, damit SWAG Tubesy unter dem Namen "tubesy" erreicht.
+  swag_default:
+    external: true

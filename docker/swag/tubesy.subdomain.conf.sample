@@ -1,0 +1,35 @@
+## Version 2026/10/18
+# Tubesy hinter SWAG (linuxserver/swag)
+#
+# 1. Tubesy und SWAG müssen im selben Docker-Netzwerk sein (swag_default).
+# 2. Diese Datei nach  <swag-config>/nginx/proxy-confs/tubesy.subdomain.conf  kopieren.
+# 3. Subdomain "tubesy" in SWAG eintragen (SUBDOMAINS=...,tubesy) oder Wildcard-Zertifikat nutzen.
+# 4. SWAG neu starten:  docker restart swag
+#
+# Erreichbar unter https://tubesy.<deine-domain>
+# WebSocket-Header, Host und X-Forwarded-* setzt SWAGs proxy.conf bereits.
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+
+    server_name tubesy.*;
+
+    include /config/nginx/ssl.conf;
+
+    client_max_body_size 1m;
+
+    # Optional: zusätzlicher Schutz über Authelia/Authentik (Tubesy hat eigene Logins).
+    #include /config/nginx/authelia-server.conf;
+
+    location / {
+        #include /config/nginx/authelia-location.conf;
+
+        include /config/nginx/proxy.conf;
+        include /config/nginx/resolver.conf;
+        set $upstream_app tubesy;
+        set $upstream_port 8080;
+        set $upstream_proto http;
+        proxy_pass $upstream_proto://$upstream_app:$upstream_port;
+    }
+}

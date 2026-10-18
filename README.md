@@ -50,27 +50,27 @@ Alternativ das Paket unter *GitHub → Packages → tubesy → Package settings*
 | `TZ` | `Europe/Berlin` | Zeitzone |
 | `PORT` | `8080` | Port im Container |
 | `YTDLP_AUTO_UPDATE` | `true` | yt-dlp bei jedem Start aktualisieren |
-| `FORWARDED_ALLOW_IPS` | `127.0.0.1` | IP/Netz des Reverse-Proxys, dem `X-Forwarded-*` geglaubt wird |
+| `FORWARDED_ALLOW_IPS` | `172.16.0.0/12` | IP/Netz des Reverse-Proxys, dem `X-Forwarded-*` geglaubt wird |
 | `COOKIE_SECURE` | `auto` | `auto` setzt das Secure-Flag bei HTTPS, `true` erzwingt es |
 | `ADMIN_USERNAME` / `ADMIN_PASSWORD` | – | Admin ohne Einrichtungsassistent anlegen (nur wenn noch kein Benutzer existiert) |
 
 Alle übrigen Einstellungen (Registrierungsmodus, parallele Downloads, Kontingente, Sitzungsdauer, Playlist-Limit) werden in der Weboberfläche unter **Verwaltung → Einstellungen** gepflegt.
 
-## Öffentlich erreichbar machen
+## Öffentlich erreichbar machen (SWAG)
 
-Tubesy gehört hinter einen Reverse-Proxy mit HTTPS (Caddy, Traefik, Nginx Proxy Manager, Synology-Reverse-Proxy):
+Die `docker-compose.yml` ist für [SWAG](https://docs.linuxserver.io/general/swag/) vorbereitet: Tubesy hängt im Netzwerk `swag_default`, und `FORWARDED_ALLOW_IPS` vertraut den Proxy-Headern aus Docker-Netzen.
 
-- **WebSockets** für `/api/ws` durchreichen (bei NPM: „Websockets Support“ aktivieren)
-- `FORWARDED_ALLOW_IPS` auf die IP bzw. das Docker-Netz des Proxys setzen, z. B. `172.16.0.0/12`, sonst sieht Tubesy alle Logins als vom Proxy kommend (Rate-Limit) und erkennt HTTPS nicht
-- Registrierung auf **Nur mit Einladung** lassen (Standard)
+1. SWAG muss laufen, damit das Netzwerk `swag_default` existiert (sonst: `docker network create swag_default`).
+2. `docker/swag/tubesy.subdomain.conf.sample` nach `<swag-config>/nginx/proxy-confs/tubesy.subdomain.conf` kopieren.
+3. In SWAG die Subdomain ergänzen (`SUBDOMAINS=…,tubesy`) oder ein Wildcard-Zertifikat nutzen.
+4. `docker restart swag`, dann ist Tubesy unter `https://tubesy.<deine-domain>` erreichbar.
 
-Beispiel Caddy:
+Hinweise:
 
-```
-tube.example.com {
-    reverse_proxy tubesy:8080
-}
-```
+- Registrierung auf **Nur mit Einladung** lassen (Standard).
+- Soll Tubesy nur noch über SWAG erreichbar sein, den `ports:`-Block in der Compose-Datei entfernen.
+- Das Docker-Standardnetz `bridge` lässt sich in Compose nicht mit anderen Netzen kombinieren (Docker-Einschränkung). Falls nötig, nach dem Start `docker network connect bridge tubesy` ausführen.
+- In der SWAG-Datei ist Authelia/Authentik als optionaler zusätzlicher Schutz bereits vorbereitet (auskommentiert).
 
 ## Projektstruktur
 

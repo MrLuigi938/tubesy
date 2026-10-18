@@ -12,8 +12,10 @@ router = APIRouter()
 @router.websocket("/api/ws")
 async def events(ws: WebSocket):
     # Browsers send cookies on cross-site WebSocket handshakes, so the origin must be checked.
+    # Only hostnames are compared: reverse proxies often pass Host without the port.
     origin = ws.headers.get("origin")
-    if origin and urlsplit(origin).netloc != ws.headers.get("host"):
+    host = urlsplit(f"//{ws.headers.get('host', '')}").hostname
+    if origin and urlsplit(origin).hostname != host:
         await ws.close(code=4403)
         return
     with SessionLocal() as db:
