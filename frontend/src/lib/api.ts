@@ -30,7 +30,7 @@ async function request<T>(method: Method, path: string, body?: unknown): Promise
 		method,
 		credentials: 'same-origin',
 		headers: {
-			'X-Requested-With': 'TubeVault',
+			'X-Requested-With': 'Tubesy',
 			...(body !== undefined ? { 'Content-Type': 'application/json' } : {})
 		},
 		body: body !== undefined ? JSON.stringify(body) : undefined

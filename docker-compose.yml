@@ -1,8 +1,8 @@
 services:
-  tubevault:
+  tubesy:
     build: .
-    image: tubevault:latest
-    container_name: tubevault
+    image: tubesy:latest
+    container_name: tubesy
     ports:
       - "8080:8080"
     environment:
@@ -20,5 +20,5 @@ services:
       # - ADMIN_PASSWORD=change-me-please
     volumes:
       - ./config:/config
-      - /volume1/downloads/tubevault:/downloads
+      - /volume1/downloads/tubesy:/downloads
     restart: unless-stopped

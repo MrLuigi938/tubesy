@@ -45,7 +45,7 @@
 
 	onMount(async () => {
 		try {
-			theme = (localStorage.getItem('tv-theme') as typeof theme) ?? null;
+			theme = (localStorage.getItem('tubesy-theme') as typeof theme) ?? null;
 		} catch {}
 		setUnauthorizedHandler(() => {
 			session.user = null;
@@ -73,7 +73,7 @@
 		theme = dark ? 'light' : 'dark';
 		document.documentElement.dataset.theme = theme;
 		try {
-			localStorage.setItem('tv-theme', theme);
+			localStorage.setItem('tubesy-theme', theme);
 		} catch {}
 	}
 
@@ -101,7 +101,7 @@
 			<div class="mx-auto flex h-14 max-w-6xl items-center gap-2 px-4">
 				<a href="/" class="mr-4 flex items-center gap-2 font-semibold">
 					<img src="/favicon.svg" alt="" class="size-7" />
-					<span>TubeVault</span>
+					<span>Tubesy</span>
 				</a>
 				<nav class="hidden items-center gap-1 md:flex">
 					{#each nav.filter((n) => !n.admin || session.user?.role === 'admin') as item (item.href)}

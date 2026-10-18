@@ -1,4 +1,4 @@
-# TubeVault
+# Tubesy
 
 Selbst gehosteter Video-Downloader mit Weboberfläche, Benutzerkonten und Rechteverwaltung, eine Alternative zu MeTube. Unter der Haube arbeitet [yt-dlp](https://github.com/yt-dlp/yt-dlp): YouTube (Videos, Playlists, Kanäle) und über 1000 weitere Seiten.
 
@@ -13,15 +13,15 @@ Selbst gehosteter Video-Downloader mit Weboberfläche, Benutzerkonten und Rechte
 - **Bibliothek**: Suche, Abspielen im Browser, Herunterladen auf das eigene Gerät, Löschen
 - **Speicherkontingente** pro Benutzer, Standard-Kontingent für neue Konten
 - **yt-dlp-Update** automatisch beim Start und per Knopfdruck in der Verwaltung
-- Dunkler/heller Modus, Smartphone-tauglich, als App installierbar (PWA, inkl. „Teilen mit TubeVault“ auf Android)
+- Dunkler/heller Modus, Smartphone-tauglich, als App installierbar (PWA, inkl. „Teilen mit Tubesy“ auf Android)
 
 ## Schnellstart (Docker Compose)
 
 ```yaml
 services:
-  tubevault:
+  tubesy:
     build: .                       # bzw. später ein veröffentlichtes Image
-    container_name: tubevault
+    container_name: tubesy
     ports:
       - "8080:8080"
     environment:
@@ -31,7 +31,7 @@ services:
       - YTDLP_AUTO_UPDATE=true
     volumes:
       - ./config:/config           # Datenbank, Cache
-      - /volume1/downloads/tubevault:/downloads
+      - /volume1/downloads/tubesy:/downloads
     restart: unless-stopped
 ```
 
@@ -45,7 +45,7 @@ Dann `http://<nas-ip>:8080` öffnen und das Administrator-Konto anlegen. Weitere
 
 | Variable | Standard | Bedeutung |
 |---|---|---|
-| `PUID` / `PGID` | `1000` | Benutzer/Gruppe, unter der TubeVault läuft und Dateien schreibt |
+| `PUID` / `PGID` | `1000` | Benutzer/Gruppe, unter der Tubesy läuft und Dateien schreibt |
 | `TZ` | `Europe/Berlin` | Zeitzone |
 | `PORT` | `8080` | Port im Container |
 | `YTDLP_AUTO_UPDATE` | `true` | yt-dlp bei jedem Start aktualisieren |
@@ -57,17 +57,17 @@ Alle übrigen Einstellungen (Registrierungsmodus, parallele Downloads, Kontingen
 
 ## Öffentlich erreichbar machen
 
-TubeVault gehört hinter einen Reverse-Proxy mit HTTPS (Caddy, Traefik, Nginx Proxy Manager, Synology-Reverse-Proxy):
+Tubesy gehört hinter einen Reverse-Proxy mit HTTPS (Caddy, Traefik, Nginx Proxy Manager, Synology-Reverse-Proxy):
 
 - **WebSockets** für `/api/ws` durchreichen (bei NPM: „Websockets Support“ aktivieren)
-- `FORWARDED_ALLOW_IPS` auf die IP bzw. das Docker-Netz des Proxys setzen, z. B. `172.16.0.0/12`, sonst sieht TubeVault alle Logins als vom Proxy kommend (Rate-Limit) und erkennt HTTPS nicht
+- `FORWARDED_ALLOW_IPS` auf die IP bzw. das Docker-Netz des Proxys setzen, z. B. `172.16.0.0/12`, sonst sieht Tubesy alle Logins als vom Proxy kommend (Rate-Limit) und erkennt HTTPS nicht
 - Registrierung auf **Nur mit Einladung** lassen (Standard)
 
 Beispiel Caddy:
 
 ```
 tube.example.com {
-    reverse_proxy tubevault:8080
+    reverse_proxy tubesy:8080
 }
 ```
 

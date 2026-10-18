@@ -2,7 +2,7 @@
 
 yt-dlp is always run as a subprocess: a hanging extractor cannot block the
 server, downloads can be cancelled by killing the process, and a yt-dlp
-update takes effect without restarting TubeVault.
+update takes effect without restarting Tubesy.
 """
 import asyncio
 import json
@@ -19,9 +19,9 @@ SPONSORBLOCK_CATEGORIES = {
 }
 DEFAULT_TEMPLATE = "%(title)s [%(id)s].%(ext)s"
 
-PROGRESS_PREFIX = "TVPROG:"
-POST_PREFIX = "TVPOST:"
-FILE_PREFIX = "TVFILE:"
+PROGRESS_PREFIX = "TSPROG:"
+POST_PREFIX = "TSPOST:"
+FILE_PREFIX = "TSFILE:"
 
 
 class PresetOptions(BaseModel):

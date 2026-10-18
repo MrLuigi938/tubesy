@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-_tmp = Path(tempfile.mkdtemp(prefix="tubevault-test-"))
+_tmp = Path(tempfile.mkdtemp(prefix="tubesy-test-"))
 os.environ.update({
     "CONFIG_DIR": str(_tmp / "config"),
     "DOWNLOAD_DIR": str(_tmp / "downloads"),
@@ -71,7 +71,7 @@ def client():
 
     from app.main import app
 
-    with TestClient(app, headers={"X-Requested-With": "TubeVault"}) as c:
+    with TestClient(app, headers={"X-Requested-With": "Tubesy"}) as c:
         yield c
 
 

@@ -18,7 +18,7 @@ from . import settings as app_settings
 from .events import hub
 from .ytdlp import FILE_PREFIX, POST_PREFIX, PROGRESS_PREFIX, PresetOptions, build_args
 
-log = logging.getLogger("tubevault.downloads")
+log = logging.getLogger("tubesy.downloads")
 
 ACTIVE = ("downloading", "processing")
 FINISHED = ("completed", "failed", "canceled")

@@ -44,7 +44,7 @@
 	}
 </script>
 
-<AuthShell title="Konto erstellen" subtitle={invite ? 'Du wurdest zu TubeVault eingeladen.' : undefined}>
+<AuthShell title="Konto erstellen" subtitle={invite ? 'Du wurdest zu Tubesy eingeladen.' : undefined}>
 	{#if phase === 'loading'}
 		<div class="flex justify-center py-6 text-muted"><Icon name="loader" /></div>
 	{:else if phase !== 'ok'}

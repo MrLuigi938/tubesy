@@ -13,11 +13,11 @@ def _bool(name: str, default: bool) -> bool:
 CONFIG_DIR = Path(os.environ.get("CONFIG_DIR", "/config")).resolve()
 DOWNLOAD_DIR = Path(os.environ.get("DOWNLOAD_DIR", "/downloads")).resolve()
 FRONTEND_DIR = Path(os.environ.get("FRONTEND_DIR", Path(__file__).resolve().parent.parent / "static"))
-DATABASE_URL = os.environ.get("DATABASE_URL", f"sqlite:///{CONFIG_DIR / 'tubevault.db'}")
+DATABASE_URL = os.environ.get("DATABASE_URL", f"sqlite:///{CONFIG_DIR / 'tubesy.db'}")
 
 # "auto" sets the Secure flag when the request arrived via https (also behind a proxy).
 COOKIE_SECURE = os.environ.get("COOKIE_SECURE", "auto").lower()
-SESSION_COOKIE = "tv_session"
+SESSION_COOKIE = "tubesy_session"
 
 YTDLP_AUTO_UPDATE = _bool("YTDLP_AUTO_UPDATE", True)
 YTDLP_PYTHON = os.environ.get("YTDLP_PYTHON", "python3")

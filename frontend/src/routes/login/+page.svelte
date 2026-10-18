@@ -36,7 +36,7 @@
 	}
 </script>
 
-<AuthShell title="Bei TubeVault anmelden">
+<AuthShell title="Bei Tubesy anmelden">
 	<form class="space-y-4" onsubmit={submit}>
 		<label class="block">
 			<span class="label">Benutzername</span>

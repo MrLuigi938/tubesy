@@ -15,7 +15,7 @@ from .services import ytdlp
 from .services.downloads import manager
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
-log = logging.getLogger("tubevault")
+log = logging.getLogger("tubesy")
 
 UNSAFE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 
@@ -49,7 +49,7 @@ async def lifespan(_app: FastAPI):
     await manager.stop()
 
 
-app = FastAPI(title="TubeVault", lifespan=lifespan, docs_url="/api/docs", openapi_url="/api/openapi.json", redoc_url=None)
+app = FastAPI(title="Tubesy", lifespan=lifespan, docs_url="/api/docs", openapi_url="/api/openapi.json", redoc_url=None)
 
 
 @app.middleware("http")
@@ -57,7 +57,7 @@ async def security_middleware(request: Request, call_next):
     # CSRF: browsers cannot add custom headers to cross-site form posts, and a
     # cross-site fetch with one triggers a CORS preflight that we never allow.
     if request.method in UNSAFE_METHODS and request.url.path.startswith("/api/"):
-        if request.headers.get("x-requested-with") != "TubeVault":
+        if request.headers.get("x-requested-with") != "Tubesy":
             return JSONResponse({"detail": "CSRF-Prüfung fehlgeschlagen"}, status_code=403)
     response = await call_next(request)
     response.headers.setdefault("X-Content-Type-Options", "nosniff")

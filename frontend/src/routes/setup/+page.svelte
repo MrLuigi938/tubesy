@@ -31,7 +31,7 @@
 	}
 </script>
 
-<AuthShell title="Willkommen bei TubeVault" subtitle="Lege zuerst das Administrator-Konto an.">
+<AuthShell title="Willkommen bei Tubesy" subtitle="Lege zuerst das Administrator-Konto an.">
 	<form class="space-y-4" onsubmit={submit}>
 		<label class="block">
 			<span class="label">Benutzername</span>
