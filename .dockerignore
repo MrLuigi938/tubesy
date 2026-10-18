@@ -6,3 +6,5 @@ frontend/build
 backend/tests
 .git
 config
+.env
+downloads

@@ -1,24 +1,26 @@
+# Tubesy – docker compose up -d
+# Persönliche Werte am besten in einer .env-Datei daneben setzen (Vorlage: .env.example).
+# Ohne .env gelten die Standardwerte hinter ":-".
+
 services:
   tubesy:
-    build: .
-    image: tubesy:latest
+    image: ghcr.io/mrluigi938/tubesy:${TUBESY_VERSION:-latest}
     container_name: tubesy
-    ports:
-      - "8080:8080"
-    environment:
-      - TZ=Europe/Berlin
-      # UID/GID of the user that owns the download folder on the NAS (`id <user>`).
-      - PUID=1000
-      - PGID=1000
-      # Fetch the newest yt-dlp on every start (YouTube changes often).
-      - YTDLP_AUTO_UPDATE=true
-      # Behind a reverse proxy: its IP or network, e.g. 172.16.0.0/12. Needed for
-      # correct client IPs (login rate limit) and https detection (secure cookies).
-      # - FORWARDED_ALLOW_IPS=172.16.0.0/12
-      # Optional: create the admin account without the setup wizard.
-      # - ADMIN_USERNAME=admin
-      # - ADMIN_PASSWORD=change-me-please
-    volumes:
-      - ./config:/config
-      - /volume1/downloads/tubesy:/downloads
     restart: unless-stopped
+    ports:
+      - "${TUBESY_PORT:-8080}:8080"
+    environment:
+      TZ: ${TZ:-Europe/Berlin}
+      # Besitzer des Download-Ordners auf der NAS (`id <benutzer>` auf der NAS ausführen).
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+      # Bei jedem Start das neueste yt-dlp holen (YouTube ändert sich oft).
+      YTDLP_AUTO_UPDATE: ${YTDLP_AUTO_UPDATE:-true}
+      # Hinter einem Reverse-Proxy dessen IP oder Netz eintragen, z. B. 172.16.0.0/12.
+      FORWARDED_ALLOW_IPS: ${FORWARDED_ALLOW_IPS:-127.0.0.1}
+      # Optional: Admin-Konto ohne Einrichtungsassistent anlegen.
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+    volumes:
+      - ${CONFIG_PATH:-./config}:/config
+      - ${DOWNLOAD_PATH:-./downloads}:/downloads

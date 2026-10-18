@@ -1,7 +1,8 @@
 # syntax=docker/dockerfile:1
 
 # ---- frontend ---------------------------------------------------------------
-FROM node:22-trixie-slim AS frontend
+# The static build is the same for every platform, so it runs natively (no QEMU).
+FROM --platform=$BUILDPLATFORM node:22-trixie-slim AS frontend
 WORKDIR /src
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci --no-audit --no-fund

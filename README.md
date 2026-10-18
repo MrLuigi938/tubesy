@@ -17,29 +17,30 @@ Selbst gehosteter Video-Downloader mit Weboberfläche, Benutzerkonten und Rechte
 
 ## Schnellstart (Docker Compose)
 
-```yaml
-services:
-  tubesy:
-    build: .                       # bzw. später ein veröffentlichtes Image
-    container_name: tubesy
-    ports:
-      - "8080:8080"
-    environment:
-      - TZ=Europe/Berlin
-      - PUID=1000                  # Besitzer des Download-Ordners auf der NAS (`id <user>`)
-      - PGID=1000
-      - YTDLP_AUTO_UPDATE=true
-    volumes:
-      - ./config:/config           # Datenbank, Cache
-      - /volume1/downloads/tubesy:/downloads
-    restart: unless-stopped
-```
+Das Image wird von GitHub Actions automatisch gebaut (amd64 und arm64) und als Paket unter `ghcr.io/mrluigi938/tubesy` veröffentlicht. Auf der NAS wird nichts gebaut.
+
+1. `docker-compose.yml` und `.env.example` auf die NAS kopieren, `.env.example` in `.env` umbenennen und `DOWNLOAD_PATH`, `PUID` und `PGID` anpassen.
+2. Starten:
+
+   ```sh
+   docker compose up -d
+   ```
+
+3. `http://<nas-ip>:8080` öffnen und das Administrator-Konto anlegen. Weitere Personen lädst du unter **Verwaltung → Einladungen** per Link ein.
+
+In Portainer oder dem Synology Container Manager kannst du den Inhalt der `docker-compose.yml` auch direkt als Stack/Projekt einfügen; die Werte aus `.env` trägst du dort als Umgebungsvariablen ein oder direkt in die Datei.
+
+**Privates Paket:** Solange das Repository privat ist, ist auch das Image privat. Die NAS muss sich dann einmalig anmelden: Auf GitHub unter *Settings → Developer settings → Personal access tokens (classic)* ein Token nur mit dem Recht `read:packages` erstellen und auf der NAS ausführen:
 
 ```sh
-docker compose up -d --build
+docker login ghcr.io -u MrLuigi938    # als Passwort das Token eingeben
 ```
 
-Dann `http://<nas-ip>:8080` öffnen und das Administrator-Konto anlegen. Weitere Personen lädst du unter **Verwaltung → Einladungen** per Link ein.
+Alternativ das Paket unter *GitHub → Packages → tubesy → Package settings* auf „Public“ stellen. Der Quellcode bleibt dabei privat.
+
+**Updates:** `docker compose pull && docker compose up -d`
+
+**Selbst bauen** (optional): `docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build`
 
 ## Umgebungsvariablen
 

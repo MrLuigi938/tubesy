@@ -1,0 +1,6 @@
+# Image lokal aus dem Quellcode bauen statt es herunterzuladen:
+#   docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+services:
+  tubesy:
+    image: tubesy:local
+    build: .
