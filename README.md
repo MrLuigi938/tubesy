@@ -72,6 +72,20 @@ Hinweise:
 - Das Docker-Standardnetz `bridge` lässt sich in Compose nicht mit anderen Netzen kombinieren (Docker-Einschränkung). Falls nötig, nach dem Start `docker network connect bridge tubesy` ausführen.
 - In der SWAG-Datei ist Authelia/Authentik als optionaler zusätzlicher Schutz bereits vorbereitet (auskommentiert).
 
+## Fehlerbehebung
+
+**„Keine Schreibrechte auf den Download-Ordner“ / `Permission denied: '/downloads/…'`**
+Tubesy läuft im Container als `PUID`/`PGID` und muss in den eingehängten Ordner schreiben dürfen. Auf der NAS (per SSH):
+
+```sh
+id <nas-benutzer>                              # uid/gid -> PUID/PGID in der Compose-Datei
+ls -ldn /volume1/downloads/tubesy              # wem gehört der Ordner?
+sudo chown -R 1026:100 /volume1/downloads/tubesy   # eigene Werte einsetzen
+docker restart tubesy
+```
+
+Auf einer Synology alternativ in der File Station: Ordner → Eigenschaften → Berechtigung → dem Benutzer Lesen/Schreiben geben. Ob die Rechte passen, zeigt **Verwaltung → Einstellungen → System → Schreibrechte**. Ein leerer, von Docker selbst angelegter Ordner wird beim Start automatisch übernommen.
+
 ## Projektstruktur
 
 ```

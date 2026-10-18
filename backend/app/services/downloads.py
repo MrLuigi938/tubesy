@@ -1,6 +1,7 @@
 """Download queue: schedules queued rows onto yt-dlp subprocesses."""
 import asyncio
 import logging
+import os
 import re
 import shutil
 import time
@@ -48,6 +49,18 @@ def safe_component(name: str, fallback: str = "Playlist") -> str:
     """Turns a playlist title into a folder name that is valid on SMB/NFS shares."""
     name = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "_", name or "").strip(" .")
     return (name[:120].rstrip(" .") or fallback)
+
+
+def permission_hint() -> str:
+    return (
+        f"Keine Schreibrechte auf den Download-Ordner (Container läuft als UID {os.getuid()}, "
+        f"GID {os.getgid()}). Auf der NAS den Ordner diesem Benutzer geben, z. B. "
+        f"'chown -R {os.getuid()}:{os.getgid()} <ordner>', oder PUID/PGID anpassen."
+    )
+
+
+def download_dir_writable() -> bool:
+    return os.access(config.DOWNLOAD_DIR, os.W_OK | os.X_OK)
 
 
 def used_bytes(db: Session, user_id: int) -> int:
@@ -223,8 +236,15 @@ class DownloadManager:
             home = user_root(user)
             if d.subfolder:
                 home = home / d.subfolder
-            home.mkdir(parents=True, exist_ok=True)
-            temp.mkdir(parents=True, exist_ok=True)
+            try:
+                home.mkdir(parents=True, exist_ok=True)
+                temp.mkdir(parents=True, exist_ok=True)
+            except PermissionError:
+                d.status, d.error = "failed", permission_hint()
+                d.finished_at = datetime.now(timezone.utc)
+                db.commit()
+                await self._emit(d)
+                return
 
             prefix = f"{d.playlist_index:03d} - " if d.subfolder and d.playlist_index else ""
             args = build_args(PresetOptions(**d.options), home, temp, d.url, prefix)

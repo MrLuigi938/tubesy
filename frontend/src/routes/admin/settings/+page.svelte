@@ -18,6 +18,7 @@
 		ffmpeg: boolean;
 		deno: boolean;
 		download_dir: string;
+		download_dir_writable: boolean;
 		disk_total: number;
 		disk_free: number;
 		users: number;
@@ -100,6 +101,7 @@
 				<div class="flex justify-between"><dt class="text-muted">ffmpeg</dt><dd class={sys.ffmpeg ? 'text-ok' : 'text-danger'}>{sys.ffmpeg ? 'vorhanden' : 'fehlt'}</dd></div>
 				<div class="flex justify-between"><dt class="text-muted">Deno (für YouTube)</dt><dd class={sys.deno ? 'text-ok' : 'text-warn'}>{sys.deno ? 'vorhanden' : 'fehlt'}</dd></div>
 				<div class="flex justify-between gap-4"><dt class="text-muted">Download-Ordner</dt><dd class="truncate font-mono text-xs">{sys.download_dir}</dd></div>
+				<div class="flex justify-between"><dt class="text-muted">Schreibrechte</dt><dd class={sys.download_dir_writable ? 'text-ok' : 'text-danger'}>{sys.download_dir_writable ? 'vorhanden' : 'fehlen – PUID/PGID bzw. Ordnerrechte prüfen'}</dd></div>
 				<div>
 					<div class="flex justify-between"><dt class="text-muted">Speicherplatz</dt><dd class="tabular-nums">{bytes(sys.disk_free)} frei von {bytes(sys.disk_total)}</dd></div>
 					<div class="mt-2 h-2 overflow-hidden rounded-full bg-surface-2"><div class="h-full rounded-full {usedPct > 90 ? 'bg-danger' : 'bg-info'}" style="width: {usedPct}%"></div></div>

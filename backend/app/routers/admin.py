@@ -14,7 +14,7 @@ from ..models import Download, Invite, User, UserSession
 from ..security import hash_password, hash_token, new_token
 from ..services import settings as app_settings
 from ..services import ytdlp
-from ..services.downloads import manager, user_root
+from ..services.downloads import download_dir_writable, manager, user_root
 from ..services.events import hub
 from .auth import user_out, validate_password, validate_username
 
@@ -230,6 +230,7 @@ async def system(db: Session = Depends(get_db)):
         "ffmpeg": shutil.which("ffmpeg") is not None,
         "deno": shutil.which("deno") is not None,
         "download_dir": str(config.DOWNLOAD_DIR),
+        "download_dir_writable": download_dir_writable(),
         "disk_total": disk.total,
         "disk_free": disk.free,
         "users": users,
