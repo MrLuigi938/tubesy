@@ -2,6 +2,7 @@
 	import { page } from '$app/state';
 	import { api, errorText } from '#lib/api.ts';
 	import DownloadCard from '#lib/components/DownloadCard.svelte';
+	import SupportedSites from '#lib/components/SupportedSites.svelte';
 	import Icon from '#lib/components/Icon.svelte';
 	import Thumb from '#lib/components/Thumb.svelte';
 	import { duration } from '#lib/format.ts';
@@ -147,7 +148,7 @@
 
 <section class="mx-auto max-w-3xl">
 	<h1 class="text-2xl font-semibold tracking-tight">Neuer Download</h1>
-	<p class="mt-1 text-sm text-muted">YouTube-Videos, Playlists, Kanäle und alles, was yt-dlp unterstützt.</p>
+	<p class="mt-1 text-sm text-muted">YouTube-Videos, Playlists und Kanäle sowie viele weitere Seiten.</p>
 
 	<form class="mt-5 flex flex-col gap-2 sm:flex-row" onsubmit={probe}>
 		<div class="relative flex-1">
@@ -165,6 +166,8 @@
 			{#if probing}<Icon name="loader" size={16} />Wird geprüft…{:else}<Icon name="search" size={16} />Prüfen{/if}
 		</button>
 	</form>
+
+	<SupportedSites />
 
 	{#if probeError}
 		<div class="mt-3 flex items-start gap-2 rounded-lg bg-danger-soft px-3 py-2.5 text-sm text-danger">

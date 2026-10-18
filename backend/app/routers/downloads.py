@@ -1,10 +1,13 @@
+import zipfile
 from pathlib import Path
+from queue import Queue
+from threading import Event, Thread
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field, field_validator
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session, joinedload
 
 from .. import config
@@ -117,6 +120,8 @@ async def create(body: CreateBody, user: User = Depends(current_user), db: Sessi
 def list_downloads(
     view: Literal["queue", "library", "all"] = "all",
     q: str | None = None,
+    playlist: str | None = None,
+    standalone: bool = False,
     scope: Literal["mine", "all"] = "mine",
     user_id: int | None = None,
     limit: int = Query(100, ge=1, le=500),
@@ -135,6 +140,10 @@ def list_downloads(
         query = query.filter(Download.status.in_(("queued", *ACTIVE, "failed", "canceled")))
     elif view == "library":
         query = query.filter(Download.status == "completed")
+    if playlist is not None:
+        query = query.filter(Download.playlist_title == playlist)
+    elif standalone:
+        query = query.filter(Download.playlist_title.is_(None))
     if q:
         like = f"%{q.strip()}%"
         query = query.filter(or_(Download.title.ilike(like), Download.uploader.ilike(like), Download.playlist_title.ilike(like)))
@@ -145,6 +154,8 @@ def list_downloads(
         "library": Download.finished_at.desc(),
         "all": Download.created_at.desc(),
     }[view]
+    if playlist is not None:
+        order = Download.playlist_index.asc()
     rows = query.order_by(order, Download.id.desc()).offset(offset).limit(limit).all()
     return {"total": total, "items": [_out(d) for d in rows]}
 
@@ -234,3 +245,155 @@ def file(download_id: int, inline: bool = False, user: User = Depends(current_us
     return FileResponse(path, filename=path.name, content_disposition_type="inline" if inline else "attachment")
 
 
+
+
+# -- playlists ---------------------------------------------------------------
+
+@router.get("/playlists")
+def list_playlists(q: str | None = None, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """Completed downloads of the caller grouped by playlist."""
+    query = db.query(
+        Download.playlist_title,
+        func.count(Download.id),
+        func.coalesce(func.sum(Download.file_size), 0),
+        func.max(Download.finished_at),
+        func.min(Download.playlist_index),
+    ).filter(Download.user_id == user.id, Download.status == "completed", Download.playlist_title.is_not(None))
+    if q:
+        query = query.filter(Download.playlist_title.ilike(f"%{q.strip()}%"))
+    groups = query.group_by(Download.playlist_title).order_by(func.max(Download.finished_at).desc()).all()
+
+    out = []
+    for title, count, size, finished, first_index in groups:
+        first = (
+            db.query(Download)
+            .filter(Download.user_id == user.id, Download.status == "completed", Download.playlist_title == title)
+            .order_by(Download.playlist_index.asc())
+            .first()
+        )
+        pending = db.query(func.count(Download.id)).filter(
+            Download.user_id == user.id, Download.playlist_title == title, Download.status != "completed"
+        ).scalar()
+        out.append({
+            "title": title,
+            "count": count,
+            "pending": pending or 0,
+            "total_size": int(size or 0),
+            "finished_at": finished.isoformat() if finished else None,
+            "thumbnail": first.thumbnail if first else None,
+            "uploader": first.uploader if first else None,
+        })
+    return out
+
+
+def _playlist_files(db: Session, user: User, title: str) -> list[tuple[Path, str]]:
+    rows = (
+        db.query(Download)
+        .filter(Download.user_id == user.id, Download.status == "completed", Download.playlist_title == title)
+        .order_by(Download.playlist_index.asc())
+        .all()
+    )
+    files, seen = [], set()
+    for d in rows:
+        path = _resolve_file(d)
+        if path is None:
+            continue
+        name = path.name
+        if name in seen:  # same video downloaded twice
+            name = f"{path.stem} ({d.id}){path.suffix}"
+        seen.add(name)
+        files.append((path, name))
+    return files
+
+
+class _Cancelled(Exception):
+    pass
+
+
+class _QueueWriter:
+    """File-like sink that hands written chunks to the response stream.
+    zipfile detects that it cannot seek and writes a streaming-compatible archive."""
+
+    def __init__(self, q: Queue, cancelled: Event):
+        self.q = q
+        self.cancelled = cancelled
+
+    def write(self, data: bytes) -> int:
+        if self.cancelled.is_set():
+            raise _Cancelled
+        if data:
+            self.q.put(bytes(data))
+        return len(data)
+
+    def flush(self) -> None:
+        pass
+
+
+def _zip_stream(files: list[tuple[Path, str]]):
+    q: Queue = Queue(maxsize=16)
+    done = object()
+    cancelled = Event()
+
+    def produce():
+        try:
+            # Videos are already compressed: store them, which is fast and streams immediately.
+            with zipfile.ZipFile(_QueueWriter(q, cancelled), "w", compression=zipfile.ZIP_STORED, allowZip64=True) as zf:
+                for path, name in files:
+                    with open(path, "rb") as src, zf.open(name, "w", force_zip64=True) as dst:
+                        while chunk := src.read(1024 * 1024):
+                            dst.write(chunk)
+        except _Cancelled:
+            pass
+        finally:
+            if not cancelled.is_set():
+                q.put(done)
+
+    Thread(target=produce, daemon=True).start()
+    try:
+        while (chunk := q.get()) is not done:
+            yield chunk
+    finally:
+        # Browser aborted the download: stop the producer and unblock it.
+        cancelled.set()
+        while not q.empty():
+            q.get_nowait()
+
+
+@router.get("/playlists/zip")
+def playlist_zip(title: str, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    files = _playlist_files(db, user, title)
+    if not files:
+        raise HTTPException(404, "Keine fertigen Dateien in dieser Playlist")
+    name = f"{safe_component(title)}.zip"
+    from urllib.parse import quote
+    return StreamingResponse(
+        _zip_stream(files),
+        media_type="application/zip",
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(name)}"},
+    )
+
+
+@router.delete("/playlists")
+async def delete_playlist(title: str, delete_files: bool = True, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    rows = db.query(Download).filter(
+        Download.user_id == user.id, Download.playlist_title == title, Download.status.not_in(ACTIVE)
+    ).all()
+    if not rows:
+        raise HTTPException(404, "Playlist nicht gefunden")
+    ids = []
+    for d in rows:
+        if delete_files:
+            _delete_file(d)
+        ids.append(d.id)
+        db.delete(d)
+    db.commit()
+    for download_id in ids:
+        await hub.publish("download_removed", {"id": download_id}, user.id)
+    return {"removed": len(ids)}
+
+
+# -- supported sites -----------------------------------------------------------
+
+@router.get("/extractors")
+async def extractors(user: User = Depends(current_user)):
+    return {"sites": await ytdlp.supported_sites()}

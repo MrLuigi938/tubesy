@@ -10,6 +10,8 @@ DEFAULTS: dict[str, object] = {
     "default_quota_gb": None,  # applied to newly registered users
     "session_days": 30,
     "max_playlist_items": 500,
+    # Minimum length for normal users; admins only need MIN_PASSWORD_LENGTH.
+    "min_password_length": 6,
 }
 
 

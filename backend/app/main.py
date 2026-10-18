@@ -8,8 +8,9 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from . import config
 from .database import Base, SessionLocal, engine
+from .deps import api_key_from
 from .models import Preset, User
-from .routers import account, admin, auth, downloads, presets, ws
+from .routers import account, admin, auth, downloads, presets, stats, ws
 from .security import hash_password
 from .services import ytdlp
 from .services.downloads import manager
@@ -56,7 +57,9 @@ app = FastAPI(title="Tubesy", lifespan=lifespan, docs_url="/api/docs", openapi_u
 async def security_middleware(request: Request, call_next):
     # CSRF: browsers cannot add custom headers to cross-site form posts, and a
     # cross-site fetch with one triggers a CORS preflight that we never allow.
-    if request.method in UNSAFE_METHODS and request.url.path.startswith("/api/"):
+    # Requests with an API key are authenticated by that key alone (never by the
+    # cookie), so they need no CSRF header; browsers cannot add the key cross-site.
+    if request.method in UNSAFE_METHODS and request.url.path.startswith("/api/") and not api_key_from(request):
         if request.headers.get("x-requested-with") != "Tubesy":
             return JSONResponse({"detail": "CSRF-Prüfung fehlgeschlagen"}, status_code=403)
     response = await call_next(request)
@@ -71,7 +74,7 @@ async def security_middleware(request: Request, call_next):
     return response
 
 
-for module in (auth, account, downloads, presets, admin, ws):
+for module in (auth, account, downloads, presets, admin, stats, ws):
     app.include_router(module.router)
 
 

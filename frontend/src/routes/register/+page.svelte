@@ -16,11 +16,13 @@
 	let confirm = $state('');
 	let error = $state('');
 	let busy = $state(false);
+	let minLength = $state(6);
 
 	onMount(async () => {
-		const s = await api.get<{ registration_mode: string; invite_valid: boolean | null }>(
+		const s = await api.get<{ registration_mode: string; invite_valid: boolean | null; min_password_length: number }>(
 			`/api/status${invite ? `?invite=${encodeURIComponent(invite)}` : ''}`
 		);
+		minLength = s.min_password_length;
 		if (invite) phase = s.invite_valid ? 'ok' : 'invalid';
 		else phase = s.registration_mode === 'open' ? 'ok' : 'closed';
 	});
@@ -67,8 +69,8 @@
 			</label>
 			<label class="block">
 				<span class="label">Passwort</span>
-				<input class="input" type="password" bind:value={password} autocomplete="new-password" required minlength="10" />
-				<span class="hint">Mindestens 10 Zeichen.</span>
+				<input class="input" type="password" bind:value={password} autocomplete="new-password" required minlength={minLength} />
+				<span class="hint">Mindestens {minLength} Zeichen.</span>
 			</label>
 			<label class="block">
 				<span class="label">Passwort wiederholen</span>

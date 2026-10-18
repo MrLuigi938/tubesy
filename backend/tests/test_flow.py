@@ -162,6 +162,83 @@ def test_websocket_origin_check(client: TestClient):
         assert exc.code == 4403
 
 
+def test_playlists_zip_and_delete(client: TestClient, media_url):
+    import io
+    import zipfile
+
+    login(client, ADMIN)
+    preset = next(p for p in client.get("/api/presets").json()["items"] if p["name"] == "Audio (MP3)")
+    items = [{"url": f"{media_url}?{i}", "title": f"Lied {i}", "index": i} for i in (1, 2)]
+    created = client.post("/api/downloads", json={"preset_id": preset["id"], "items": items, "playlist_title": "Sommer"}).json()
+    for c in created:
+        assert wait_for(client, c["id"])["status"] == "completed"
+    single = client.post("/api/downloads", json={"preset_id": preset["id"], "items": [{"url": media_url + "?solo"}]}).json()[0]
+    wait_for(client, single["id"])
+
+    playlists = {p["title"]: p for p in client.get("/api/playlists").json()}
+    assert playlists["Sommer"]["count"] == 2 and playlists["Sommer"]["total_size"] > 0
+    in_list = client.get("/api/downloads", params={"view": "library", "playlist": "Sommer"}).json()["items"]
+    assert [d["playlist_index"] for d in in_list] == [1, 2]
+    solo = client.get("/api/downloads", params={"view": "library", "standalone": True}).json()["items"]
+    assert all(d["playlist_title"] is None for d in solo) and any(d["id"] == single["id"] for d in solo)
+
+    r = client.get("/api/playlists/zip", params={"title": "Sommer"})
+    assert r.status_code == 200 and r.headers["content-type"] == "application/zip"
+    names = zipfile.ZipFile(io.BytesIO(r.content)).namelist()
+    assert len(names) == 2 and names[0].startswith("001 - ") and names[1].startswith("002 - ")
+    assert zipfile.ZipFile(io.BytesIO(r.content)).testzip() is None
+
+    assert client.delete("/api/playlists", params={"title": "Sommer"}).json()["removed"] == 2
+    assert "Sommer" not in {p["title"] for p in client.get("/api/playlists").json()}
+
+
+def test_api_keys_and_dashboard_api(client: TestClient, media_url):
+    login(client, ADMIN)
+    read = client.post("/api/account/tokens", json={"name": "HeimDeck", "scope": "read"}).json()
+    full = client.post("/api/account/tokens", json={"name": "Kurzbefehl", "scope": "full"}).json()
+    assert read["key"].startswith("tsy_") and "key" not in client.get("/api/account/tokens").json()[0]
+
+    client.cookies.clear()
+    bare = TestClient(client.app)  # no CSRF header, no cookie: like an external tool
+    assert bare.get("/api/v1/stats").status_code == 401
+    assert bare.get("/api/v1/stats", headers={"X-Api-Key": "tsy_falsch"}).status_code == 401
+    st = bare.get("/api/v1/stats", headers={"X-Api-Key": read["key"]}).json()
+    assert st["user"]["username"] == "chef" and "instance" in st and "completed" in st["downloads"]
+    assert isinstance(bare.get("/api/v1/queue", headers={"Authorization": f"Bearer {read['key']}"}).json(), list)
+
+    # read-only keys cannot start downloads, full keys can (without CSRF header)
+    assert bare.post("/api/v1/download", json={"url": media_url}, headers={"X-Api-Key": read["key"]}).status_code == 403
+    r = bare.post("/api/v1/download", json={"url": media_url + "?api", "preset": "Audio (MP3)"}, headers={"X-Api-Key": full["key"]})
+    assert r.status_code == 200 and r.json()["queued"] == 1 and r.json()["preset"] == "Audio (MP3)"
+
+    # keys cannot manage the account
+    assert bare.get("/api/account/tokens", headers={"X-Api-Key": full["key"]}).status_code == 403
+
+    login(client, ADMIN)
+    assert client.delete(f"/api/account/tokens/{read['id']}").status_code == 200
+    assert bare.get("/api/v1/stats", headers={"X-Api-Key": read["key"]}).status_code == 401
+
+
+def test_password_policy(client: TestClient):
+    login(client, ADMIN)
+    assert client.get("/api/status").json()["min_password_length"] == 6
+    assert client.post("/api/admin/users", json={"username": "kurz", "password": "12345"}).status_code == 422
+    assert client.post("/api/admin/users", json={"username": "kurz", "password": "123456"}).status_code == 200
+    client.put("/api/admin/settings", json={"min_password_length": 10})
+    assert client.get("/api/status").json()["min_password_length"] == 10
+    r = client.post("/api/admin/users", json={"username": "kurz2", "password": "1234567"})
+    assert r.status_code == 400 and "10" in r.json()["detail"]
+    # admins only need the hard minimum
+    assert client.post("/api/admin/users", json={"username": "admin2", "password": "1234567", "role": "admin"}).status_code == 200
+    client.put("/api/admin/settings", json={"min_password_length": 6})
+
+
+def test_supported_sites(client: TestClient):
+    login(client, ADMIN)
+    sites = client.get("/api/extractors").json()["sites"]
+    assert len(sites) > 500 and "youtube" in [s.lower() for s in sites] and "generic" not in sites
+
+
 def test_login_rate_limit(client: TestClient):
     client.cookies.clear()
     codes = [client.post("/api/auth/login", json={"username": "chef", "password": "falsch"}).status_code for _ in range(9)]

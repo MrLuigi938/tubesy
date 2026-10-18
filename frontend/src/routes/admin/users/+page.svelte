@@ -20,9 +20,14 @@
 	let deleting = $state<Row | null>(null);
 	let deleteFiles = $state(false);
 	let busy = $state(false);
+	let userMin = $state(6);
+	const createMin = $derived(form.role === 'admin' ? 6 : userMin);
 
 	const load = async () => (users = await api.get<Row[]>('/api/admin/users'));
-	onMount(load);
+	onMount(async () => {
+		await load();
+		userMin = (await api.get<{ min_password_length: number }>('/api/status')).min_password_length;
+	});
 
 	async function act(fn: () => Promise<unknown>, ok: string) {
 		busy = true;
@@ -122,7 +127,7 @@
 <Modal bind:open={createOpen} title="Benutzer anlegen">
 	<form id="create-user" class="space-y-4" onsubmit={createUser}>
 		<label class="block"><span class="label">Benutzername</span><input class="input" bind:value={form.username} autocapitalize="none" required /></label>
-		<label class="block"><span class="label">Passwort</span><input class="input" type="text" bind:value={form.password} minlength="10" required /><span class="hint">Mindestens 10 Zeichen. Teile es der Person auf sicherem Weg mit.</span></label>
+		<label class="block"><span class="label">Passwort</span><input class="input" type="text" bind:value={form.password} minlength={createMin} required /><span class="hint">Mindestens {createMin} Zeichen. Teile es der Person auf sicherem Weg mit.</span></label>
 		<label class="block"><span class="label">E-Mail <span class="font-normal text-muted">(optional)</span></span><input class="input" type="email" bind:value={form.email} /></label>
 		<div class="grid gap-4 sm:grid-cols-2">
 			<label class="block"><span class="label">Rolle</span><select class="input" bind:value={form.role}><option value="user">Benutzer</option><option value="admin">Administrator</option></select></label>
@@ -143,7 +148,7 @@
 				<label class="block"><span class="label">Rolle</span><select class="input" bind:value={edit.role}><option value="user">Benutzer</option><option value="admin">Administrator</option></select></label>
 				<label class="block"><span class="label">Kontingent (GB)</span><input class="input" type="number" min="0" step="0.5" bind:value={edit.quota_gb} placeholder="unbegrenzt" /></label>
 			</div>
-			<label class="block"><span class="label">Neues Passwort</span><input class="input" type="text" bind:value={edit.password} placeholder="leer lassen = unverändert" /><span class="hint">Setzt das Passwort zurück und meldet alle Sitzungen ab.</span></label>
+			<label class="block"><span class="label">Neues Passwort</span><input class="input" type="text" bind:value={edit.password} placeholder="leer lassen = unverändert" /><span class="hint">Mindestens {edit.role === 'admin' ? 6 : userMin} Zeichen. Setzt das Passwort zurück und meldet alle Sitzungen ab.</span></label>
 			{#if edit.user.id !== session.user?.id}
 				<label class="flex items-center gap-2 text-sm"><input type="checkbox" bind:checked={edit.is_active} /> Konto aktiv (deaktivieren sperrt die Anmeldung sofort)</label>
 			{/if}

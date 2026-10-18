@@ -14,7 +14,7 @@
 	];
 
 	$effect(() => {
-		if (session.user && session.user.role !== 'admin') goto('/', { replaceState: true });
+		if (session.user && session.user.role !== 'admin') goto('/', { replace: true });
 	});
 </script>
 

@@ -12,6 +12,7 @@
 		default_quota_gb: number | null;
 		session_days: number;
 		max_playlist_items: number;
+		min_password_length: number;
 	}
 	interface System {
 		ytdlp_version: string;
@@ -79,6 +80,7 @@
 				<label><span class="label">Max. Einträge pro Playlist</span><input class="input" type="number" min="1" max="5000" bind:value={s.max_playlist_items} /></label>
 				<label><span class="label">Standard-Kontingent neuer Benutzer (GB)</span><input class="input" type="number" min="0" step="0.5" bind:value={quota} placeholder="unbegrenzt" /></label>
 				<label><span class="label">Anmeldung gültig (Tage)</span><input class="input" type="number" min="1" max="365" bind:value={s.session_days} /></label>
+				<label><span class="label">Mindestlänge Passwort (Benutzer)</span><input class="input" type="number" min="6" max="64" bind:value={s.min_password_length} /><span class="hint">Gilt für normale Benutzer. Administratoren brauchen immer mindestens 6 Zeichen.</span></label>
 			</div>
 			<button class="btn-primary mt-5" disabled={saving}>{#if saving}<Icon name="loader" size={16} />{/if}Speichern</button>
 		{/if}

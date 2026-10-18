@@ -28,12 +28,28 @@ def validate_username(v: str) -> str:
     return v
 
 
+MIN_PASSWORD_LENGTH = 6
+
+
 def validate_password(v: str) -> str:
-    if len(v) < 10:
-        raise ValueError("Mindestens 10 Zeichen")
+    if len(v) < MIN_PASSWORD_LENGTH:
+        raise ValueError(f"Mindestens {MIN_PASSWORD_LENGTH} Zeichen")
     if len(v) > 256:
         raise ValueError("Höchstens 256 Zeichen")
     return v
+
+
+def required_length(db: Session, role: str) -> int:
+    if role == "admin":
+        return MIN_PASSWORD_LENGTH
+    return max(MIN_PASSWORD_LENGTH, int(app_settings.get(db, "min_password_length")))
+
+
+def enforce_password_policy(db: Session, password: str, role: str) -> None:
+    """The admin-configurable minimum applies to normal users only."""
+    need = required_length(db, role)
+    if len(password) < need:
+        raise HTTPException(400, f"Das Passwort muss mindestens {need} Zeichen haben")
 
 
 class Credentials(BaseModel):
@@ -112,6 +128,8 @@ def status(db: Session = Depends(get_db), invite: str | None = None):
         "needs_setup": db.query(User).count() == 0,
         "registration_mode": app_settings.get(db, "registration_mode"),
         "invite_valid": _valid_invite(db, invite) is not None if invite else None,
+        "min_password_length": required_length(db, "user"),
+        "min_password_length_admin": MIN_PASSWORD_LENGTH,
     }
 
 
@@ -175,6 +193,7 @@ def register(body: RegisterBody, request: Request, response: Response, db: Sessi
     if db.query(User).filter_by(username=body.username).count():
         raise HTTPException(409, "Benutzername ist bereits vergeben")
 
+    enforce_password_policy(db, body.password, invite.role if invite else "user")
     register_limiter.hit(ip)
     quota_gb = app_settings.get(db, "default_quota_gb")
     user = User(

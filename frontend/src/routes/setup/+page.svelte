@@ -39,8 +39,8 @@
 		</label>
 		<label class="block">
 			<span class="label">Passwort</span>
-			<input class="input" type="password" bind:value={password} autocomplete="new-password" required minlength="10" />
-			<span class="hint">Mindestens 10 Zeichen. Die Instanz ist ggf. öffentlich erreichbar, wähle ein starkes Passwort.</span>
+			<input class="input" type="password" bind:value={password} autocomplete="new-password" required minlength="6" />
+			<span class="hint">Mindestens 6 Zeichen. Die Instanz ist ggf. öffentlich erreichbar, wähle ein sicheres Passwort.</span>
 		</label>
 		<label class="block">
 			<span class="label">Passwort wiederholen</span>

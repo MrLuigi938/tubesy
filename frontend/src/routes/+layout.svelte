@@ -34,12 +34,12 @@
 		const status = await api.get<{ needs_setup: boolean }>('/api/status');
 		const path = page.url.pathname;
 		if (status.needs_setup) {
-			if (path !== '/setup') await goto('/setup', { replaceState: true });
+			if (path !== '/setup') await goto('/setup', { replace: true });
 		} else if (!session.user && !isPublic) {
 			const next = path + page.url.search;
-			await goto(`/login${next !== '/' ? `?next=${encodeURIComponent(next)}` : ''}`, { replaceState: true });
+			await goto(`/login${next !== '/' ? `?next=${encodeURIComponent(next)}` : ''}`, { replace: true });
 		} else if (session.user && isPublic) {
-			await goto('/', { replaceState: true });
+			await goto('/', { replace: true });
 		}
 	}
 

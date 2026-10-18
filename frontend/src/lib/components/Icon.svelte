@@ -32,7 +32,10 @@
 		server: 'M2 2h20v8H2zM2 14h20v8H2zM6 6h.01M6 18h.01',
 		loader: 'M21 12a9 9 0 1 1-6.2-8.6',
 		external: 'M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14 21 3',
-		monitor: 'M2 3h20v14H2zM8 21h8M12 17v4'
+		monitor: 'M2 3h20v14H2zM8 21h8M12 17v4',
+		chevron: 'm6 9 6 6 6-6',
+		back: 'm15 18-6-6 6-6',
+		grid: 'M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z'
 	};
 	export type IconName = keyof typeof paths;
 </script>

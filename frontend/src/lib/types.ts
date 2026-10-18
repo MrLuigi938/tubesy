@@ -88,3 +88,13 @@ export interface ProbeResult {
 	count?: number;
 	entries?: ProbeEntry[];
 }
+
+export interface PlaylistGroup {
+	title: string;
+	count: number;
+	pending: number;
+	total_size: number;
+	finished_at: string | null;
+	thumbnail: string | null;
+	uploader: string | null;
+}

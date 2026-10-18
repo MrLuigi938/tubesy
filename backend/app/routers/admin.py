@@ -16,7 +16,7 @@ from ..services import settings as app_settings
 from ..services import ytdlp
 from ..services.downloads import download_dir_writable, manager, user_root
 from ..services.events import hub
-from .auth import user_out, validate_password, validate_username
+from .auth import enforce_password_policy, user_out, validate_password, validate_username
 
 router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(require_admin)])
 
@@ -70,6 +70,7 @@ class SettingsBody(BaseModel):
     clear_default_quota: bool = False
     session_days: int | None = Field(None, ge=1, le=365)
     max_playlist_items: int | None = Field(None, ge=1, le=5000)
+    min_password_length: int | None = Field(None, ge=6, le=64)
 
 
 def _stats(db: Session) -> dict[int, dict]:
@@ -105,6 +106,7 @@ def list_users(db: Session = Depends(get_db)):
 def create_user(body: CreateUserBody, db: Session = Depends(get_db)):
     if db.query(User).filter_by(username=body.username).count():
         raise HTTPException(409, "Benutzername ist bereits vergeben")
+    enforce_password_policy(db, body.password, body.role)
     user = User(
         username=body.username, email=(body.email or "").strip() or None, role=body.role,
         password_hash=hash_password(body.password),
@@ -137,6 +139,7 @@ def update_user(user_id: int, body: UpdateUserBody, admin: User = Depends(requir
         user.is_active = body.is_active
         revoke = not body.is_active
     if body.password:
+        enforce_password_policy(db, body.password, user.role)
         user.password_hash = hash_password(body.password)
         revoke = True
     if revoke and user.id != admin.id:

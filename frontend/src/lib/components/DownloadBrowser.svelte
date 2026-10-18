@@ -10,7 +10,11 @@
 	import StatusBadge from './StatusBadge.svelte';
 	import Thumb from './Thumb.svelte';
 
-	let { admin = false }: { admin?: boolean } = $props();
+	let {
+		admin = false,
+		standalone = false,
+		playlist = null
+	}: { admin?: boolean; standalone?: boolean; playlist?: string | null } = $props();
 
 	const PAGE = 48;
 	let items = $state<Download[]>([]);
@@ -32,6 +36,8 @@
 		const params = new URLSearchParams({ view, limit: String(PAGE), offset: String(offset) });
 		if (q.trim()) params.set('q', q.trim());
 		if (admin) params.set('scope', 'all');
+		if (playlist != null) params.set('playlist', playlist);
+		else if (standalone) params.set('standalone', 'true');
 		if (admin && userId !== '') params.set('user_id', String(userId));
 		return `/api/downloads?${params}`;
 	}
@@ -53,8 +59,12 @@
 		load();
 		if (admin) api.get<User[]>('/api/admin/users').then((u) => (users = u));
 		return subscribe((e) => {
-			const accept = (d: Download) =>
-				admin ? userId === '' || d.user_id === userId : d.status === 'completed';
+			const accept = (d: Download) => {
+				if (admin) return userId === '' || d.user_id === userId;
+				if (d.status !== 'completed') return false;
+				if (playlist != null) return d.playlist_title === playlist;
+				return !standalone || d.playlist_title == null;
+			};
 			const before = items.length;
 			const next = applyEvent(items, e, accept);
 			// New completions belong at the top of the library.
@@ -95,7 +105,7 @@
 <div class="mb-5 flex flex-col gap-2 sm:flex-row">
 	<div class="relative flex-1">
 		<Icon name="search" size={16} class="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted" />
-		<input class="input pl-9" placeholder="Titel, Kanal oder Playlist suchen…" bind:value={q} oninput={onSearch} />
+		<input class="input pl-9" placeholder={playlist != null ? 'In dieser Playlist suchen…' : standalone ? 'Titel oder Kanal suchen…' : 'Titel, Kanal oder Playlist suchen…'} bind:value={q} oninput={onSearch} />
 	</div>
 	{#if admin}
 		<select class="input sm:w-56" bind:value={userId} onchange={() => load()}>
@@ -110,8 +120,10 @@
 {:else if !items.length}
 	<div class="card flex flex-col items-center px-6 py-14 text-center">
 		<div class="mb-3 flex size-11 items-center justify-center rounded-full bg-surface-2 text-muted"><Icon name="library" /></div>
-		<p class="font-medium">{q ? 'Keine Treffer' : 'Noch keine Downloads'}</p>
-		<p class="mt-1 text-sm text-muted">{q ? 'Versuche einen anderen Suchbegriff.' : 'Fertige Downloads erscheinen hier.'}</p>
+		<p class="font-medium">{q ? 'Keine Treffer' : standalone ? 'Noch keine einzelnen Videos' : 'Noch keine Downloads'}</p>
+		<p class="mt-1 text-sm text-muted">
+			{q ? 'Versuche einen anderen Suchbegriff.' : standalone ? 'Videos aus Playlists findest du unter „Playlists“.' : 'Fertige Downloads erscheinen hier.'}
+		</p>
 	</div>
 {:else}
 	<p class="mb-3 text-sm text-muted">{total} {total === 1 ? 'Eintrag' : 'Einträge'}</p>
@@ -138,11 +150,13 @@
 					{/if}
 				</button>
 				<div class="flex flex-1 flex-col p-3">
-					<p class="line-clamp-2 text-sm font-medium" title={d.title}>{d.title}</p>
+					<p class="line-clamp-2 text-sm font-medium" title={d.title}>
+						{#if playlist != null && d.playlist_index}<span class="mr-1 text-muted tabular-nums">{d.playlist_index}.</span>{/if}{d.title}
+					</p>
 					<p class="mt-1 truncate text-xs text-muted">
 						{#if admin && d.username}<span class="font-medium text-text">@{d.username}</span> · {/if}{d.uploader ?? ''}
 					</p>
-					{#if d.playlist_title}
+					{#if d.playlist_title && playlist == null}
 						<p class="mt-1 flex items-center gap-1 truncate text-xs text-muted"><Icon name="folder" size={12} />{d.playlist_title}</p>
 					{/if}
 					<div class="mt-auto flex items-center gap-1 pt-3">

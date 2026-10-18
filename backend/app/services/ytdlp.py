@@ -227,3 +227,28 @@ async def self_update() -> str:
     if proc.returncode != 0:
         raise RuntimeError(out.decode(errors="replace")[-500:])
     return await version()
+
+
+_sites_cache: tuple[str, list[str]] | None = None
+
+
+async def supported_sites() -> list[str]:
+    """Site names yt-dlp can handle, deduplicated (e.g. 'youtube:tab' -> 'youtube')."""
+    global _sites_cache
+    current = await version()
+    if _sites_cache and _sites_cache[0] == current:
+        return _sites_cache[1]
+    proc = await asyncio.create_subprocess_exec(
+        config.YTDLP_PYTHON, "-m", "yt_dlp", "--list-extractors", "--ignore-config",
+        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL,
+    )
+    out, _ = await proc.communicate()
+    names: dict[str, str] = {}
+    for line in out.decode(errors="replace").splitlines():
+        name = line.split(":", 1)[0].split(" (CURRENTLY BROKEN)")[0].strip()
+        if not name or name.lower() in {"generic", "generic:quoted-html"} or "BROKEN" in line:
+            continue
+        names.setdefault(name.lower(), name)
+    sites = sorted(names.values(), key=str.lower)
+    _sites_cache = (current, sites)
+    return sites

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { api, errorText } from '#lib/api.ts';
+	import { copyText } from '#lib/clipboard.ts';
 	import Icon from '#lib/components/Icon.svelte';
 	import { date } from '#lib/format.ts';
 	import { toast } from '#lib/toast.svelte.ts';
@@ -53,12 +54,8 @@
 	}
 
 	async function copy() {
-		try {
-			await navigator.clipboard.writeText(link);
-			toast('Link kopiert');
-		} catch {
-			toast('Kopieren nicht möglich, bitte manuell markieren', 'info');
-		}
+		if (await copyText(link)) toast('Link kopiert');
+		else toast('Kopieren nicht möglich, bitte manuell markieren', 'info');
 	}
 
 	async function remove(i: Invite) {
