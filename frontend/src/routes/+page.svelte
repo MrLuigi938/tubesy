@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '#lib/i18n.svelte.ts';
 	import { page } from '$app/state';
 	import { api, errorText } from '#lib/api.ts';
 	import DownloadCard from '#lib/components/DownloadCard.svelte';
@@ -127,7 +128,7 @@
 				playlist_title: isList ? result.title : null,
 				own_folder: ownFolder
 			});
-			toast(items.length === 1 ? 'Zur Warteschlange hinzugefügt' : `${items.length} Videos zur Warteschlange hinzugefügt`);
+			toast(items.length === 1 ? t('Zur Warteschlange hinzugefügt') : t('{n} Videos zur Warteschlange hinzugefügt', { n: items.length }));
 			result = null;
 			url = '';
 		} catch (err) {
@@ -147,8 +148,8 @@
 </script>
 
 <section class="mx-auto max-w-3xl">
-	<h1 class="text-2xl font-semibold tracking-tight">Neuer Download</h1>
-	<p class="mt-1 text-sm text-muted">YouTube-Videos, Playlists und Kanäle sowie viele weitere Seiten.</p>
+	<h1 class="text-2xl font-semibold tracking-tight">{t('Neuer Download')}</h1>
+	<p class="mt-1 text-sm text-muted">{t('YouTube-Videos, Playlists und Kanäle sowie viele weitere Seiten.')}</p>
 
 	<form class="mt-5 flex flex-col gap-2 sm:flex-row" onsubmit={probe}>
 		<div class="relative flex-1">
@@ -163,7 +164,7 @@
 			/>
 		</div>
 		<button class="btn-primary h-11 px-5" disabled={probing || !url.trim()}>
-			{#if probing}<Icon name="loader" size={16} />Wird geprüft…{:else}<Icon name="search" size={16} />Prüfen{/if}
+			{#if probing}<Icon name="loader" size={16} />{t('Wird geprüft…')}{:else}<Icon name="search" size={16} />{t('Prüfen')}{/if}
 		</button>
 	</form>
 
@@ -181,7 +182,7 @@
 				<Thumb src={result.thumbnail ?? entries[0]?.thumbnail ?? null} class="aspect-video w-32 sm:w-44" />
 				<div class="min-w-0 flex-1">
 					<span class="badge bg-surface-2 text-muted">
-						{result.type === 'playlist' ? `Playlist · ${result.count} Videos` : (result.extractor ?? 'Video')}
+						{result.type === 'playlist' ? t('Playlist · {n} Videos', { n: result.count ?? 0 }) : (result.extractor ?? 'Video')}
 					</span>
 					<p class="mt-1.5 line-clamp-2 font-semibold">{result.title ?? result.url}</p>
 					<p class="mt-0.5 text-sm text-muted">
@@ -193,10 +194,10 @@
 			{#if result.type === 'playlist'}
 				<div class="border-t border-border">
 					<div class="flex flex-wrap items-center gap-2 px-4 py-2.5">
-						<input class="input h-8 max-w-56 py-1" placeholder="Filtern…" bind:value={filter} />
-						<button class="btn-ghost h-8 px-2.5 py-1" onclick={() => selectAll(true)}>Alle</button>
-						<button class="btn-ghost h-8 px-2.5 py-1" onclick={() => selectAll(false)}>Keine</button>
-						<span class="ml-auto text-sm text-muted">{selected.size} von {entries.length} ausgewählt</span>
+						<input class="input h-8 max-w-56 py-1" placeholder={t('Filtern…')} bind:value={filter} />
+						<button class="btn-ghost h-8 px-2.5 py-1" onclick={() => selectAll(true)}>{t('Alle')}</button>
+						<button class="btn-ghost h-8 px-2.5 py-1" onclick={() => selectAll(false)}>{t('Keine')}</button>
+						<span class="ml-auto text-sm text-muted">{t('{n} von {total} ausgewählt', { n: selected.size, total: entries.length })}</span>
 					</div>
 					<ul class="max-h-80 overflow-y-auto border-t border-border">
 						{#each visibleEntries as entry (entry.index)}
@@ -215,21 +216,21 @@
 
 			<div class="flex flex-col gap-3 border-t border-border bg-surface-2/50 px-4 py-3 sm:flex-row sm:items-center">
 				<label class="flex items-center gap-2 text-sm">
-					<span class="text-muted">Preset</span>
+					<span class="text-muted">{t('Preset')}</span>
 					<select class="input h-9 w-auto py-1" bind:value={presetId}>
 						{#each presets as p (p.id)}<option value={p.id}>{p.name}</option>{/each}
 					</select>
 				</label>
 				{#if result.type === 'playlist'}
 					<label class="flex items-center gap-2 text-sm text-muted">
-						<input type="checkbox" bind:checked={ownFolder} /> Eigener Ordner
+						<input type="checkbox" bind:checked={ownFolder} /> {t('Eigener Ordner')}
 					</label>
 				{/if}
 				<div class="flex gap-2 sm:ml-auto">
-					<button class="btn-ghost" onclick={() => (result = null)}>Verwerfen</button>
+					<button class="btn-ghost" onclick={() => (result = null)}>{t('Verwerfen')}</button>
 					<button class="btn-primary" disabled={submitting || (result.type === 'playlist' && !selected.size)} onclick={submit}>
 						{#if submitting}<Icon name="loader" size={16} />{:else}<Icon name="download" size={16} />{/if}
-						{result.type === 'playlist' ? `${selected.size} herunterladen` : 'Herunterladen'}
+						{result.type === 'playlist' ? t('{n} herunterladen', { n: selected.size }) : t('Herunterladen')}
 					</button>
 				</div>
 			</div>
@@ -239,10 +240,10 @@
 
 <section class="mx-auto mt-10 max-w-3xl">
 	<div class="mb-3 flex items-center gap-3">
-		<h2 class="text-lg font-semibold">Warteschlange</h2>
-		{#if activeCount}<span class="badge bg-info-soft text-info">{activeCount} aktiv</span>{/if}
+		<h2 class="text-lg font-semibold">{t('Warteschlange')}</h2>
+		{#if activeCount}<span class="badge bg-info-soft whitespace-nowrap text-info">{t('{n} aktiv', { n: activeCount })}</span>{/if}
 		{#if finishedCount}
-			<button class="btn-ghost ml-auto h-8 px-2.5 py-1 text-xs" onclick={clearFinished}>Fehler & Abbrüche entfernen</button>
+			<button class="btn-ghost ml-auto h-8 px-2.5 py-1 text-xs" onclick={clearFinished}>{t('Fehler & Abbrüche entfernen')}</button>
 		{/if}
 	</div>
 	{#if !loaded}
@@ -250,8 +251,8 @@
 	{:else if queue.length === 0}
 		<div class="card flex flex-col items-center px-6 py-10 text-center">
 			<div class="mb-3 flex size-11 items-center justify-center rounded-full bg-surface-2 text-muted"><Icon name="download" /></div>
-			<p class="font-medium">Keine laufenden Downloads</p>
-			<p class="mt-1 text-sm text-muted">Füge oben eine URL ein, um loszulegen.</p>
+			<p class="font-medium">{t('Keine laufenden Downloads')}</p>
+			<p class="mt-1 text-sm text-muted">{t('Füge oben eine URL ein, um loszulegen.')}</p>
 		</div>
 	{:else}
 		<div class="space-y-2">
@@ -263,8 +264,8 @@
 {#if recent.length}
 	<section class="mx-auto mt-10 max-w-3xl">
 		<div class="mb-3 flex items-center">
-			<h2 class="text-lg font-semibold">Zuletzt fertig</h2>
-			<a href="/library" class="ml-auto text-sm font-medium text-accent hover:underline">Zur Bibliothek</a>
+			<h2 class="text-lg font-semibold">{t('Zuletzt fertig')}</h2>
+			<a href="/library" class="ml-auto text-sm font-medium text-accent hover:underline">{t('Zur Bibliothek')}</a>
 		</div>
 		<div class="space-y-2">
 			{#each recent as d (d.id)}
@@ -274,7 +275,7 @@
 						<p class="truncate text-sm font-medium">{d.title}</p>
 						<p class="truncate text-xs text-muted">{d.filename}</p>
 					</div>
-					<a class="btn-icon" href="/api/downloads/{d.id}/file" title="Herunterladen"><Icon name="download" /></a>
+					<a class="btn-icon" href="/api/downloads/{d.id}/file" title={t('Herunterladen')}><Icon name="download" /></a>
 				</div>
 			{/each}
 		</div>

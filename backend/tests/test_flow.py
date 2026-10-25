@@ -70,6 +70,8 @@ def test_full_flow(client: TestClient, media_url, downloads_dir):
     assert r.status_code == 200 and r.headers["content-disposition"].startswith("attachment")
     r = client.get(f"/api/downloads/{d['id']}/file?inline=1", headers={"Range": "bytes=0-99"})
     assert r.status_code == 206 and len(r.content) == 100
+    assert r.headers["content-type"] == "video/mp4" and r.headers["content-disposition"].startswith("inline")
+    assert "sandbox" in r.headers["content-security-policy"]
 
     # -- playlist items land in their own folder, numbered ------------------
     created = client.post("/api/downloads", json={

@@ -23,7 +23,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     FRONTEND_DIR=/app/static \
     PUID=1000 \
     PGID=1000 \
-    TZ=Europe/Berlin
+    TZ=Etc/UTC
 
 # Static binaries instead of apt packages: smaller image, identical on amd64 and arm64.
 COPY --from=ffmpeg /ffmpeg /ffprobe /usr/local/bin/
@@ -39,6 +39,10 @@ COPY --from=frontend /src/build /app/static
 COPY docker/entrypoint.sh /entrypoint.sh
 COPY docker/healthcheck.py /healthcheck.py
 RUN chmod +x /entrypoint.sh
+
+# The version shown in the footer: the release for tags, "edge-<commit>" for main.
+ARG VERSION=dev
+ENV TUBESY_VERSION=$VERSION
 
 WORKDIR /app
 EXPOSE 8080

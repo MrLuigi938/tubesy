@@ -1,4 +1,5 @@
 import re
+from typing import Literal
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
@@ -8,12 +9,13 @@ from sqlalchemy.orm import Session
 from .. import config
 from ..database import get_db
 from ..deps import client_ip, current_session, current_user
-from ..models import Invite, User, UserSession
+from ..models import Invite, Preset, User, UserSession
 from ..security import (
     hash_password, hash_token, login_ip_limiter, login_user_limiter, needs_rehash, new_token,
     register_limiter, verify_password,
 )
 from ..services import settings as app_settings
+from ..services.ytdlp import BUILTIN_NAMES_EN
 
 router = APIRouter(prefix="/api", tags=["auth"])
 
@@ -65,6 +67,10 @@ class Credentials(BaseModel):
     @classmethod
     def _p(cls, v: str) -> str:
         return validate_password(v)
+
+
+class SetupBody(Credentials):
+    language: Literal["de", "en"] = "de"
 
 
 class LoginBody(BaseModel):
@@ -134,9 +140,13 @@ def status(db: Session = Depends(get_db), invite: str | None = None):
 
 
 @router.post("/setup")
-def setup(body: Credentials, request: Request, response: Response, db: Session = Depends(get_db)):
+def setup(body: SetupBody, request: Request, response: Response, db: Session = Depends(get_db)):
     if db.query(User).count() > 0:
         raise HTTPException(409, "Die Einrichtung wurde bereits abgeschlossen")
+    app_settings.update(db, {"language": body.language})
+    if body.language == "en":
+        for preset in db.query(Preset).filter(Preset.user_id.is_(None)):
+            preset.name = BUILTIN_NAMES_EN.get(preset.name, preset.name)
     user = User(username=body.username, password_hash=hash_password(body.password), role="admin")
     db.add(user)
     db.commit()

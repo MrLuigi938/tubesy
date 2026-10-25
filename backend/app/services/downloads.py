@@ -31,6 +31,8 @@ _POSTPROCESSOR_LABELS = {
     "ExtractAudio": "Audio extrahieren",
     "FFmpegExtractAudio": "Audio extrahieren",
     "EmbedThumbnail": "Thumbnail einbetten",
+    "ThumbnailsConvertor": "Thumbnail umwandeln",
+    "FFmpegThumbnailsConvertor": "Thumbnail umwandeln",
     "FFmpegMetadata": "Metadaten",
     "Metadata": "Metadaten",
     "EmbedSubtitle": "Untertitel einbetten",
@@ -332,6 +334,11 @@ class DownloadManager:
                     d.progress = round(min(100.0, done_n / total_n * 100), 1)
                 if status == "finished":
                     d.progress = 100.0
+                live["progress"] = d.progress
+                # Some postprocessors (thumbnail conversion) run before the download starts.
+                if d.status == "processing":
+                    d.status = "downloading"
+                    db.commit()
             elif line.startswith(POST_PREFIX):
                 status, name = (line[len(POST_PREFIX):].split("|") + [""])[:2]
                 if status == "started":

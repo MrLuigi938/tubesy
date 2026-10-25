@@ -1,0 +1,58 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Build frontend
+        working-directory: frontend
+        run: npm ci && npm run build
+      # The package for installs without Docker (install/install.sh): backend,
+      # built frontend and the version. Same name for every release, so
+      # releases/latest/download/tubesy.tar.gz always is the newest one.
+      - name: Build package
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          mkdir -p pkg dist
+          cp -R backend/app frontend/build backend/requirements.txt pkg/
+          mv pkg/build pkg/static
+          echo "$version" > pkg/VERSION
+          find pkg -name __pycache__ -prune -exec rm -rf {} +
+          tar -czf dist/tubesy.tar.gz -C pkg .
+          cp install/install.sh install/proxmox-lxc.sh dist/
+          cd dist && sha256sum * > checksums.txt
+      # The notes are the tag's section from CHANGELOG.md; GitHub adds the commit list.
+      - name: Release notes
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          awk -v v="$version" '
+            /^## / { if (found) exit; if (index($0, "[" v "]")) { found = 1; next } }
+            found { print }
+          ' CHANGELOG.md > notes.md
+          {
+            echo
+            echo "### Install / update"
+            echo
+            echo "- Docker: \`ghcr.io/mrluigi938/tubesy:${version}\` (or \`:latest\`), update with \`docker compose pull && docker compose up -d\`"
+            echo "- Debian / Ubuntu / Proxmox LXC: run \`install.sh\` again"
+            echo "- Guides: [English](https://github.com/MrLuigi938/tubesy/blob/main/docs/en/installation.md) · [Deutsch](https://github.com/MrLuigi938/tubesy/blob/main/docs/de/installation.md)"
+          } >> notes.md
+      - uses: softprops/action-gh-release@v2
+        with:
+          body_path: notes.md
+          files: dist/*
+          generate_release_notes: true
+          # Tags like v1.1.0-beta.1 become a pre-release, which is never shown as the latest release.
+          prerelease: ${{ contains(github.ref_name, '-') }}

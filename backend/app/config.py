@@ -19,6 +19,18 @@ DATABASE_URL = os.environ.get("DATABASE_URL", f"sqlite:///{CONFIG_DIR / 'tubesy.
 COOKIE_SECURE = os.environ.get("COOKIE_SECURE", "auto").lower()
 SESSION_COOKIE = "tubesy_session"
 
+def _version() -> str:
+    """Set at image build time ("1.2.0" for releases, "edge-<commit>" for main);
+    a release package has a VERSION file instead; "dev" when running from source."""
+    value = os.environ.get("TUBESY_VERSION", "").strip()
+    if not value:
+        file = Path(__file__).resolve().parent.parent / "VERSION"
+        value = file.read_text(encoding="utf-8").strip() if file.is_file() else ""
+    return value or "dev"
+
+
+VERSION = _version()
+
 YTDLP_AUTO_UPDATE = _bool("YTDLP_AUTO_UPDATE", True)
 YTDLP_PYTHON = os.environ.get("YTDLP_PYTHON", "python3")
 

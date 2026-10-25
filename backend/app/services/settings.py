@@ -12,6 +12,10 @@ DEFAULTS: dict[str, object] = {
     "max_playlist_items": 500,
     # Minimum length for normal users; admins only need MIN_PASSWORD_LENGTH.
     "min_password_length": 6,
+    # Ask GitHub twice a day for a newer Tubesy release (only a hint, nothing is installed).
+    "update_check": True,
+    # Language picked during setup (de | en); names the built-in presets.
+    "language": "de",
 }
 
 

@@ -1,40 +1,29 @@
 # Tubesy – docker compose up -d
-# Persönliche Werte am besten in einer .env-Datei daneben setzen (Vorlage: .env.example).
-# Ohne .env gelten die Standardwerte hinter ":-".
+# Your own values are best kept in a .env file next to this one (template: .env.example).
+# Without .env the defaults after ":-" apply.
+# Guide: https://github.com/MrLuigi938/tubesy/blob/main/docs/en/docker-compose.md
 
 services:
   tubesy:
+    # latest = newest stable version, 1.0 = newest 1.0.x, edge = development state
     image: ghcr.io/mrluigi938/tubesy:${TUBESY_VERSION:-latest}
     container_name: tubesy
     restart: unless-stopped
-    # Direktzugriff im LAN (http://<nas-ip>:8080). Wenn Tubesy nur über SWAG
-    # erreichbar sein soll, diesen Block entfernen.
+    # Remove this block if Tubesy should only be reachable through a reverse proxy.
     ports:
       - "${TUBESY_PORT:-8080}:8080"
     environment:
-      TZ: ${TZ:-Europe/Berlin}
-      # Besitzer des Download-Ordners auf der NAS (`id <benutzer>` auf der NAS ausführen).
+      TZ: ${TZ:-Etc/UTC}
+      # Owner of the download folder (run `id <user>` on the server).
       PUID: ${PUID:-1000}
       PGID: ${PGID:-1000}
-      # Bei jedem Start das neueste yt-dlp holen (YouTube ändert sich oft).
+      # Get the newest yt-dlp on every start (sites change often).
       YTDLP_AUTO_UPDATE: ${YTDLP_AUTO_UPDATE:-true}
-      # Reverse-Proxy (SWAG): X-Forwarded-* wird nur aus Docker-Netzen akzeptiert.
-      # Damit sieht Tubesy die echte Client-IP (Login-Sperre) und erkennt HTTPS (sichere Cookies).
+      # Reverse proxies in Docker networks may send X-Forwarded-* (real client IP, HTTPS).
       FORWARDED_ALLOW_IPS: ${FORWARDED_ALLOW_IPS:-172.16.0.0/12}
-      # Optional: Admin-Konto ohne Einrichtungsassistent anlegen.
+      # Optional: create the administrator without the setup wizard.
       ADMIN_USERNAME: ${ADMIN_USERNAME:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
     volumes:
       - ${CONFIG_PATH:-./config}:/config
       - ${DOWNLOAD_PATH:-./downloads}:/downloads
-    networks:
-      - swag_default
-    # Das Docker-Standardnetz "bridge" kann Compose nicht zusammen mit anderen Netzen
-    # anlegen (Docker-Einschränkung). Falls Tubesy zusätzlich dort hängen soll,
-    # einmalig nach dem Start ausführen:
-    #   docker network connect bridge tubesy
-
-networks:
-  # Netzwerk von SWAG, damit SWAG Tubesy unter dem Namen "tubesy" erreicht.
-  swag_default:
-    external: true

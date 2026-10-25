@@ -1,3 +1,4 @@
+import platform
 import shutil
 from datetime import datetime, timedelta, timezone
 from typing import Literal
@@ -16,6 +17,7 @@ from ..services import settings as app_settings
 from ..services import ytdlp
 from ..services.downloads import download_dir_writable, manager, user_root
 from ..services.events import hub
+from ..services.updates import checker
 from .auth import enforce_password_policy, user_out, validate_password, validate_username
 
 router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(require_admin)])
@@ -71,6 +73,7 @@ class SettingsBody(BaseModel):
     session_days: int | None = Field(None, ge=1, le=365)
     max_playlist_items: int | None = Field(None, ge=1, le=5000)
     min_password_length: int | None = Field(None, ge=6, le=64)
+    update_check: bool | None = None
 
 
 def _stats(db: Session) -> dict[int, dict]:
@@ -213,12 +216,14 @@ def get_settings(db: Session = Depends(get_db)):
 
 
 @router.put("/settings")
-def put_settings(body: SettingsBody, db: Session = Depends(get_db)):
+async def put_settings(body: SettingsBody, db: Session = Depends(get_db)):
     values = body.model_dump(exclude_none=True, exclude={"clear_default_quota"})
     if body.clear_default_quota:
         values["default_quota_gb"] = None
     result = app_settings.update(db, values)
     manager.wake()  # concurrency limits may have been raised
+    if "update_check" in values:
+        checker.check_soon()  # show or hide the hint right away
     return result
 
 
@@ -229,6 +234,10 @@ async def system(db: Session = Depends(get_db)):
     users = db.query(User).count()
     db.close()
     return {
+        "version": config.VERSION,
+        "update": checker.update,
+        "update_checked_at": checker.checked_at.isoformat() if checker.checked_at else None,
+        "python": platform.python_version(),
         "ytdlp_version": await ytdlp.version(),
         "ffmpeg": shutil.which("ffmpeg") is not None,
         "deno": shutil.which("deno") is not None,

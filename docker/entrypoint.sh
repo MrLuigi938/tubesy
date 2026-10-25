@@ -18,8 +18,8 @@ if [ "$(id -u)" = "0" ]; then
         chown "$PUID:$PGID" "$DOWNLOAD_DIR" 2>/dev/null || true
     fi
     if ! $drop test -w "$DOWNLOAD_DIR" || ! $drop test -x "$DOWNLOAD_DIR"; then
-        echo "WARNUNG: $DOWNLOAD_DIR ist für UID $PUID / GID $PGID nicht beschreibbar." >&2
-        echo "         Auf der NAS: chown -R $PUID:$PGID <download-ordner>  oder PUID/PGID anpassen." >&2
+        echo "WARNING: $DOWNLOAD_DIR is not writable for UID $PUID / GID $PGID." >&2
+        echo "         On the host: chown -R $PUID:$PGID <download-folder>  or adjust PUID/PGID." >&2
     fi
     export HOME="$CONFIG_DIR"
     exec $drop "$0" "$@"

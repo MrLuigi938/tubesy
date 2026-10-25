@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '#lib/i18n.svelte.ts';
 	import { api, errorText } from '#lib/api.ts';
 	import { bytes, relative } from '#lib/format.ts';
 	import { subscribe } from '#lib/live.svelte.ts';
@@ -41,7 +42,7 @@
 
 <div class="relative mb-5">
 	<Icon name="search" size={16} class="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted" />
-	<input class="input pl-9" placeholder="Playlist suchen…" bind:value={q} oninput={() => later(250)} />
+	<input class="input pl-9" placeholder={t('Playlist suchen…')} bind:value={q} oninput={() => later(250)} />
 </div>
 
 {#if loading}
@@ -49,8 +50,8 @@
 {:else if !groups.length}
 	<div class="card flex flex-col items-center px-6 py-14 text-center">
 		<div class="mb-3 flex size-11 items-center justify-center rounded-full bg-surface-2 text-muted"><Icon name="folder" /></div>
-		<p class="font-medium">{q ? 'Keine Treffer' : 'Noch keine Playlists'}</p>
-		<p class="mt-1 text-sm text-muted">{q ? 'Versuche einen anderen Suchbegriff.' : 'Lade eine Playlist herunter, sie erscheint dann hier gesammelt.'}</p>
+		<p class="font-medium">{q ? t('Keine Treffer') : t('Noch keine Playlists')}</p>
+		<p class="mt-1 text-sm text-muted">{q ? t('Versuche einen anderen Suchbegriff.') : t('Lade eine Playlist herunter, sie erscheint dann hier gesammelt.')}</p>
 	</div>
 {:else}
 	<p class="mb-3 text-sm text-muted">{groups.length} {groups.length === 1 ? 'Playlist' : 'Playlists'}</p>
@@ -74,7 +75,7 @@
 						<p class="mt-1 truncate text-xs text-muted">{g.uploader ?? ''}</p>
 						<p class="mt-2 flex items-center gap-2 text-xs text-muted">
 							<span>{bytes(g.total_size)} · {relative(g.finished_at)}</span>
-							{#if g.pending}<span class="badge bg-info-soft text-info">+{g.pending} in Arbeit</span>{/if}
+							{#if g.pending}<span class="badge bg-info-soft text-info">{t('+{n} in Arbeit', { n: g.pending })}</span>{/if}
 						</p>
 					</div>
 				</article>

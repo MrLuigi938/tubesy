@@ -1,3 +1,5 @@
+import { t, tServer } from './i18n.svelte';
+
 export class ApiError extends Error {
 	constructor(
 		public status: number,
@@ -10,14 +12,14 @@ export class ApiError extends Error {
 type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 function detailMessage(detail: unknown): string {
-	if (typeof detail === 'string') return detail;
+	if (typeof detail === 'string') return tServer(detail);
 	// FastAPI validation errors: [{loc, msg}, ...]
 	if (Array.isArray(detail) && detail.length) {
 		return detail
-			.map((d) => String(d?.msg ?? d).replace(/^Value error, /, ''))
+			.map((d) => tServer(String(d?.msg ?? d).replace(/^Value error, /, '')))
 			.join(' · ');
 	}
-	return 'Unbekannter Fehler';
+	return t('Unbekannter Fehler');
 }
 
 let onUnauthorized: (() => void) | null = null;

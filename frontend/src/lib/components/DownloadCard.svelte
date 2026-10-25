@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t, tServer } from '#lib/i18n.svelte.ts';
 	import { api, errorText } from '#lib/api.ts';
 	import { bytes, duration, eta, relative } from '#lib/format.ts';
 	import { toast } from '#lib/toast.svelte.ts';
@@ -25,7 +26,7 @@
 </script>
 
 <div class="card flex gap-3 p-3">
-	<Thumb src={d.thumbnail} mode={d.mode} class="aspect-video w-28 sm:w-36" />
+	<Thumb src={d.thumbnail} mode={d.mode} class="aspect-video w-28 self-start sm:w-36" />
 	<div class="min-w-0 flex-1">
 		<div class="flex items-start justify-between gap-2">
 			<div class="min-w-0">
@@ -40,14 +41,14 @@
 			</div>
 			<div class="flex shrink-0 items-center gap-0.5">
 				{#if d.status === 'queued' || active}
-					<button class="btn-icon" title="Abbrechen" disabled={busy} onclick={() => run(() => api.post(`/api/downloads/${d.id}/cancel`))}>
+					<button class="btn-icon" title={t('Abbrechen')} disabled={busy} onclick={() => run(() => api.post(`/api/downloads/${d.id}/cancel`))}>
 						<Icon name="x" />
 					</button>
 				{:else if d.status === 'failed' || d.status === 'canceled'}
-					<button class="btn-icon" title="Erneut versuchen" disabled={busy} onclick={() => run(() => api.post(`/api/downloads/${d.id}/retry`))}>
+					<button class="btn-icon" title={t('Erneut versuchen')} disabled={busy} onclick={() => run(() => api.post(`/api/downloads/${d.id}/retry`))}>
 						<Icon name="retry" />
 					</button>
-					<button class="btn-icon" title="Aus Liste entfernen" disabled={busy} onclick={() => run(() => api.del(`/api/downloads/${d.id}?delete_file=false`))}>
+					<button class="btn-icon" title={t('Aus Liste entfernen')} disabled={busy} onclick={() => run(() => api.del(`/api/downloads/${d.id}?delete_file=false`))}>
 						<Icon name="trash" />
 					</button>
 				{/if}
@@ -57,16 +58,16 @@
 		<div class="mt-2 flex items-center gap-2 text-xs">
 			<StatusBadge status={d.status} />
 			{#if active}
-				<span class="text-muted">{d.stage ?? ''}</span>
+				<span class="text-muted">{tServer(d.stage ?? '')}</span>
 				<span class="ml-auto tabular-nums text-muted">
 					{#if d.status === 'downloading'}
 						{d.progress.toFixed(1)} %
 						{#if d.speed} · {bytes(d.speed)}/s{/if}
-						{#if d.eta} · noch {eta(d.eta)}{/if}
+						{#if d.eta} · {t('noch {time}', { time: eta(d.eta) })}{/if}
 					{/if}
 				</span>
 			{:else if d.status === 'queued'}
-				<span class="text-muted">hinzugefügt {relative(d.created_at)}</span>
+				<span class="text-muted">{t('hinzugefügt {when}', { when: relative(d.created_at) })}</span>
 			{:else if d.status === 'completed'}
 				<span class="text-muted">{bytes(d.file_size)} · {relative(d.finished_at)}</span>
 			{/if}
@@ -81,7 +82,7 @@
 			</div>
 		{/if}
 		{#if d.status === 'failed' && d.error}
-			<p class="mt-2 line-clamp-2 text-xs break-words text-danger" title={d.error}>{d.error}</p>
+			<p class="mt-2 line-clamp-2 text-xs break-words text-danger" title={tServer(d.error)}>{tServer(d.error)}</p>
 		{/if}
 	</div>
 </div>

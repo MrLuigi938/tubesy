@@ -78,6 +78,12 @@ BUILTIN_PRESETS: list[tuple[str, dict]] = [
     ("Audio (Original)", PresetOptions(mode="audio", audio_format="best").model_dump()),
 ]
 
+# English names for the built-in presets, used when English is picked during setup.
+BUILTIN_NAMES_EN = {
+    "Beste Qualität (MP4)": "Best quality (MP4)",
+    "Beste Qualität (MKV, Untertitel)": "Best quality (MKV, subtitles)",
+}
+
 
 def build_args(opts: PresetOptions, home: Path, temp: Path, url: str, prefix: str = "") -> list[str]:
     args = [

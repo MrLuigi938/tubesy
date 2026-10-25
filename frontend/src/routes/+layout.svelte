@@ -1,8 +1,11 @@
 <script lang="ts">
+	import { t } from '#lib/i18n.svelte.ts';
 	import '../app.css';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { api, setUnauthorizedHandler } from '#lib/api.ts';
+	import { appInfo, refreshInfo, updateStale } from '#lib/appinfo.svelte.ts';
+	import Credit from '#lib/components/Credit.svelte';
 	import Icon, { type IconName } from '#lib/components/Icon.svelte';
 	import Toasts from '#lib/components/Toasts.svelte';
 	import { connect, connection, disconnect } from '#lib/live.svelte.ts';
@@ -61,6 +64,32 @@
 		else disconnect();
 	});
 
+	// Version and update hint for the footer; the server itself checks twice a day.
+	$effect(() => {
+		if (!session.user) return;
+		refreshInfo();
+		const timer = setInterval(refreshInfo, 6 * 3600e3);
+		return () => clearInterval(timer);
+	});
+
+	// Admins: red dot on "Verwaltung" and, once per browser session, a short hint.
+	const isAdmin = $derived(session.user?.role === 'admin');
+	const stale = $derived(isAdmin && updateStale(appInfo.update));
+	let updateBubble = $state(false);
+	$effect(() => {
+		if (!stale || !appInfo.update) return;
+		const key = 'tubesy-update-hint';
+		try {
+			if (!location.search.includes('updatehint') && sessionStorage.getItem(key) === appInfo.update.version) return;
+			sessionStorage.setItem(key, appInfo.update.version);
+		} catch {
+			/* private mode: show it anyway */
+		}
+		updateBubble = true;
+		const timer = setTimeout(() => (updateBubble = false), 5000);
+		return () => clearTimeout(timer);
+	});
+
 	$effect(() => {
 		// Re-check access on navigation (e.g. after logout).
 		page.url.pathname;
@@ -96,9 +125,9 @@
 {:else if !session.user}
 	<div class="flex min-h-screen items-center justify-center text-muted"><Icon name="loader" size={28} /></div>
 {:else}
-	<div class="min-h-screen">
+	<div class="flex min-h-screen flex-col">
 		<header class="sticky top-0 z-30 border-b border-border bg-surface/85 backdrop-blur">
-			<div class="mx-auto flex h-14 max-w-6xl items-center gap-2 px-4">
+			<div class="relative mx-auto flex h-14 max-w-6xl items-center gap-2 px-4">
 				<a href="/" class="mr-4 flex items-center gap-2 font-semibold">
 					<img src="/favicon.svg" alt="" class="size-7" />
 					<span>Tubesy</span>
@@ -111,38 +140,51 @@
 								? 'bg-surface-2 text-text'
 								: 'text-muted hover:text-text'}"
 						>
-							<Icon name={item.icon} size={16} />{item.label}
+							<Icon name={item.icon} size={16} />{t(item.label)}
+							{#if item.admin && stale}<span class="size-2 rounded-full bg-danger" title={t('Update verfügbar')}></span>{/if}
 						</a>
 					{/each}
 				</nav>
 				<div class="ml-auto flex items-center gap-1">
 					<span
 						class="mr-1 size-2 rounded-full {connection.online ? 'bg-ok' : 'bg-warn'}"
-						title={connection.online ? 'Live-Verbindung aktiv' : 'Live-Verbindung getrennt – wird neu aufgebaut'}
+						title={connection.online ? t('Live-Verbindung aktiv') : t('Live-Verbindung getrennt – wird neu aufgebaut')}
 					></span>
-					<button class="btn-icon" onclick={toggleTheme} aria-label="Farbschema wechseln"><Icon name={theme === 'light' ? 'moon' : 'sun'} /></button>
+					<button class="btn-icon" onclick={toggleTheme} aria-label={t('Farbschema wechseln')}><Icon name={theme === 'light' ? 'moon' : 'sun'} /></button>
 					<a href="/account" class="btn-ghost hidden sm:inline-flex {active('/account') ? 'bg-surface-2 text-text' : ''}">
 						<Icon name="user" size={16} />{session.user.username}
 					</a>
-					<button class="btn-icon hidden sm:inline-flex" onclick={logout} title="Abmelden"><Icon name="logout" /></button>
-					<button class="btn-icon md:hidden" onclick={() => (menuOpen = !menuOpen)} aria-label="Menü"><Icon name="menu" /></button>
+					<button class="btn-icon hidden sm:inline-flex" onclick={logout} title={t('Abmelden')}><Icon name="logout" /></button>
+					<button class="btn-icon relative md:hidden" onclick={() => (menuOpen = !menuOpen)} aria-label={stale ? t('Menü – Update verfügbar') : t('Menü')}>
+						<Icon name="menu" />
+						{#if stale}<span class="absolute top-1.5 right-1.5 size-2 rounded-full bg-danger ring-2 ring-surface"></span>{/if}
+					</button>
 				</div>
+				{#if updateBubble}
+					<a
+						href="/admin/settings#info"
+						class="absolute top-[calc(100%+6px)] right-4 z-40 rounded-full bg-danger px-3.5 py-1.5 text-[13px] font-semibold text-white shadow-lg"
+						onclick={() => (updateBubble = false)}>⬆ {t('Update verfügbar')}</a
+					>
+				{/if}
 			</div>
 			{#if menuOpen}
 				<nav class="border-t border-border px-4 py-2 md:hidden">
 					{#each [...nav.filter((n) => !n.admin || session.user?.role === 'admin'), { href: '/account', label: 'Konto', icon: 'user' as IconName }] as item (item.href)}
 						<a href={item.href} class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium {active(item.href) ? 'bg-surface-2' : 'text-muted'}">
-							<Icon name={item.icon} size={16} />{item.label}
+							<Icon name={item.icon} size={16} />{t(item.label)}
+							{#if 'admin' in item && item.admin && stale}<span class="size-2 rounded-full bg-danger"></span>{/if}
 						</a>
 					{/each}
 					<button class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted" onclick={logout}>
-						<Icon name="logout" size={16} />Abmelden
+						<Icon name="logout" size={16} />{t('Abmelden')}
 					</button>
 				</nav>
 			{/if}
 		</header>
-		<main class="mx-auto max-w-6xl px-4 py-6 sm:py-8">
+		<main class="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:py-8">
 			{@render children()}
 		</main>
+		<Credit app version={appInfo.version} update={appInfo.update} />
 	</div>
 {/if}

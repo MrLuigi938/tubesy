@@ -1,3 +1,4 @@
+import mimetypes
 import zipfile
 from pathlib import Path
 from queue import Queue
@@ -242,7 +243,16 @@ def file(download_id: int, inline: bool = False, user: User = Depends(current_us
     path = _resolve_file(d) if d.status == "completed" else None
     if path is None:
         raise HTTPException(404, "Datei nicht vorhanden")
-    return FileResponse(path, filename=path.name, content_disposition_type="inline" if inline else "attachment")
+    # Only media is shown in the browser. Anything else (e.g. an HTML or SVG file a
+    # site served) is always a download, so it can never run script on this origin.
+    media_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
+    if not media_type.startswith(("video/", "audio/", "image/")) or media_type == "image/svg+xml":
+        inline, media_type = False, "application/octet-stream"
+    return FileResponse(
+        path, filename=path.name, media_type=media_type,
+        content_disposition_type="inline" if inline else "attachment",
+        headers={"Content-Security-Policy": "sandbox; default-src 'none'"},
+    )
 
 
 

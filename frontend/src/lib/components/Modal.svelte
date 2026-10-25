@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '#lib/i18n.svelte.ts';
 	import type { Snippet } from 'svelte';
 	import Icon from './Icon.svelte';
 
@@ -29,7 +30,7 @@
 	{#if open}
 		<div class="flex items-center justify-between border-b border-border px-5 py-3.5">
 			<h2 class="text-base font-semibold">{title}</h2>
-			<button class="btn-icon -mr-2" onclick={() => (open = false)} aria-label="Schließen"><Icon name="x" /></button>
+			<button class="btn-icon -mr-2" onclick={() => (open = false)} aria-label={t('Schließen')}><Icon name="x" /></button>
 		</div>
 		<div class="max-h-[70vh] overflow-y-auto px-5 py-4">{@render children()}</div>
 		{#if footer}

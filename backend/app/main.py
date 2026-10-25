@@ -2,18 +2,20 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from . import config
 from .database import Base, SessionLocal, engine
-from .deps import api_key_from
+from .deps import api_key_from, current_user
 from .models import Preset, User
 from .routers import account, admin, auth, downloads, presets, stats, ws
+from .routers.auth import validate_password, validate_username
 from .security import hash_password
 from .services import ytdlp
 from .services.downloads import manager
+from .services.updates import checker
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("tubesy")
@@ -26,8 +28,15 @@ def _seed() -> None:
         if db.query(Preset).filter(Preset.user_id.is_(None)).count() == 0:
             db.add_all(Preset(user_id=None, name=name, options=opts) for name, opts in ytdlp.BUILTIN_PRESETS)
         if config.ADMIN_USERNAME and config.ADMIN_PASSWORD and db.query(User).count() == 0:
-            db.add(User(username=config.ADMIN_USERNAME.lower(), password_hash=hash_password(config.ADMIN_PASSWORD), role="admin"))
-            log.info("Admin-Konto '%s' aus Umgebungsvariablen angelegt", config.ADMIN_USERNAME)
+            # The name is also the user's folder under /downloads, so the usual rules apply.
+            try:
+                username = validate_username(config.ADMIN_USERNAME)
+                validate_password(config.ADMIN_PASSWORD)
+            except ValueError as exc:
+                log.error("ADMIN_USERNAME/ADMIN_PASSWORD ungültig (%s), Einrichtungsassistent wird angezeigt", exc)
+            else:
+                db.add(User(username=username, password_hash=hash_password(config.ADMIN_PASSWORD), role="admin"))
+                log.info("Admin-Konto '%s' aus Umgebungsvariablen angelegt", username)
         db.commit()
 
 
@@ -46,11 +55,13 @@ async def lifespan(_app: FastAPI):
     if config.YTDLP_AUTO_UPDATE:
         asyncio.create_task(_auto_update())
     await manager.start()
+    checker.start()
     yield
+    checker.stop()
     await manager.stop()
 
 
-app = FastAPI(title="Tubesy", lifespan=lifespan, docs_url="/api/docs", openapi_url="/api/openapi.json", redoc_url=None)
+app = FastAPI(title="Tubesy", version=config.VERSION, lifespan=lifespan, docs_url="/api/docs", openapi_url="/api/openapi.json", redoc_url=None)
 
 
 @app.middleware("http")
@@ -81,6 +92,12 @@ for module in (auth, account, downloads, presets, admin, stats, ws):
 @app.get("/api/health", include_in_schema=False)
 def health():
     return {"ok": True}
+
+
+@app.get("/api/info", tags=["auth"])
+def info(_user: User = Depends(current_user)):
+    """Version for the footer and, when the check found one, the newer release."""
+    return {"version": config.VERSION, "update": checker.update}
 
 
 @app.exception_handler(StarletteHTTPException)
