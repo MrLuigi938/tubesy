@@ -1,127 +1,98 @@
-# Tubesy
+<p align="center">
+  <img src="frontend/static/favicon.svg" width="96" alt="Tubesy logo">
+</p>
 
-Selbst gehosteter Video-Downloader mit Weboberfläche, Benutzerkonten und Rechteverwaltung, eine Alternative zu MeTube. Unter der Haube arbeitet [yt-dlp](https://github.com/yt-dlp/yt-dlp): YouTube (Videos, Playlists, Kanäle) und über 1000 weitere Seiten.
+<h1 align="center">Tubesy</h1>
 
-## Funktionen
+<p align="center">
+  A self-hosted video downloader for your home server – with a clean web interface, user accounts and permissions.<br>
+  YouTube videos, playlists and channels, and more than 1000 other sites, powered by <a href="https://github.com/yt-dlp/yt-dlp">yt-dlp</a>.
+</p>
 
-- **Login & Benutzerverwaltung**: Admin- und Benutzerrollen, Einrichtungsassistent beim ersten Start, Registrierung *geschlossen / nur mit Einladungslink / offen*
-- **Datentrennung**: Jeder Benutzer hat seinen eigenen Ordner (`/downloads/<benutzer>/…`) und sieht nur seine Downloads, Admins sehen alles
-- **Sicherheit für öffentliche Instanzen**: Argon2-Passwörter, HttpOnly-Session-Cookies, CSRF-Schutz, Login-Rate-Limit, Sitzungsübersicht mit Abmelden einzelner Geräte, Security-Header/CSP
-- **Downloads**: Vorschau vor dem Laden, komplette Playlists und Kanäle mit Auswahl einzelner Videos, eigener nummerierter Ordner pro Playlist
-- **Presets**: Auflösung, Container (MP4/MKV/WebM), Nur-Audio (MP3/M4A/Opus/FLAC/WAV), Untertitel, Thumbnail, Metadaten, Kapitel, SponsorBlock, Dateinamen-Vorlage; globale Presets plus eigene pro Benutzer
-- **Warteschlange** mit Live-Fortschritt (WebSocket), Geschwindigkeit, Restzeit, Abbrechen, Wiederholen; Limits gesamt und pro Benutzer, damit niemand mit einer großen Playlist alle anderen blockiert
-- **Bibliothek**: Suche, Abspielen im Browser, Herunterladen auf das eigene Gerät, Löschen
-- **Speicherkontingente** pro Benutzer, Standard-Kontingent für neue Konten
-- **yt-dlp-Update** automatisch beim Start und per Knopfdruck in der Verwaltung
-- Dunkler/heller Modus, Smartphone-tauglich, als App installierbar (PWA, inkl. „Teilen mit Tubesy“ auf Android)
+<p align="center">
+  <b>English</b> · <a href="README.de.md">Deutsch</a>
+</p>
 
-## Schnellstart (Docker Compose)
+![Tubesy: queue with live progress](docs/images/downloads.webp)
+<p align="center"><sub>Screenshots with demo data</sub></p>
 
-Das Image wird von GitHub Actions automatisch gebaut (amd64 und arm64) und als Paket unter `ghcr.io/mrluigi938/tubesy` veröffentlicht. Auf der NAS wird nichts gebaut.
+## Highlights
 
-1. `docker-compose.yml` und `.env.example` auf die NAS kopieren, `.env.example` in `.env` umbenennen und `DOWNLOAD_PATH`, `PUID` und `PGID` anpassen.
-2. Starten:
+- **Paste, check, download** – preview title and length first, then pick a preset. Live progress with speed and remaining time, cancel and retry.
+- **Playlists and channels** – choose single videos or all of them; each playlist gets its own numbered folder and can be downloaded as a ZIP later.
+- **Presets** – resolution, MP4/MKV/WebM, audio only (MP3, M4A, Opus, FLAC, WAV), subtitles, thumbnail, metadata, chapters, SponsorBlock and file name templates. Global presets plus your own.
+- **Library** – search, play in the browser, download to your device.
+- **For the whole household** – accounts with roles, invitation links, a folder per user, storage quotas and fair queueing, so one big playlist doesn't block everyone else.
+- **Safe to put online** – Argon2 passwords, HttpOnly session cookies, CSRF protection, sign-in rate limits, a session list per account and strict security headers.
+- **Always working** – yt-dlp updates itself on every start; Tubesy tells you when a new version of itself is out.
+- **English and German**, dark and light mode, works on the phone and installs as an app – on Android with *Share → Tubesy*.
+- **API** for dashboards like [Heimdeck](https://github.com/MrLuigi938/heimdeck) and for automations.
 
-   ```sh
-   docker compose up -d
-   ```
+| | |
+|---|---|
+| ![Library](docs/images/library.webp) | ![Playlists](docs/images/playlists.webp) |
+| ![Presets](docs/images/presets.webp) | ![Admin settings](docs/images/admin.webp) |
 
-3. `http://<nas-ip>:8080` öffnen und das Administrator-Konto anlegen. Weitere Personen lädst du unter **Verwaltung → Einladungen** per Link ein.
+<p align="center"><img src="docs/images/phone.webp" width="300" alt="Tubesy on a phone"></p>
 
-In Portainer oder dem Synology Container Manager kannst du den Inhalt der `docker-compose.yml` auch direkt als Stack/Projekt einfügen; die Werte aus `.env` trägst du dort als Umgebungsvariablen ein oder direkt in die Datei.
+## Quick start (Docker Compose)
 
-**Privates Paket:** Solange das Repository privat ist, ist auch das Image privat. Die NAS muss sich dann einmalig anmelden: Auf GitHub unter *Settings → Developer settings → Personal access tokens (classic)* ein Token nur mit dem Recht `read:packages` erstellen und auf der NAS ausführen:
+```yaml
+services:
+  tubesy:
+    image: ghcr.io/mrluigi938/tubesy:latest
+    container_name: tubesy
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      TZ: Etc/UTC          # your time zone, e.g. Europe/London
+      PUID: 1000           # owner of the download folder (`id <user>`)
+      PGID: 1000
+    volumes:
+      - ./config:/config
+      - ./downloads:/downloads
+```
 
 ```sh
-docker login ghcr.io -u MrLuigi938    # als Passwort das Token eingeben
+docker compose up -d
 ```
 
-Alternativ das Paket unter *GitHub → Packages → tubesy → Package settings* auf „Public“ stellen. Der Quellcode bleibt dabei privat.
+Open `http://<your-server>:8080`, choose your language and create the administrator account. Invite more people under **Admin → Invitations**.
 
-**Updates:** `docker compose pull && docker compose up -d`
+## Installation
 
-**Selbst bauen** (optional): `docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build`
+| | |
+|---|---|
+| 🐳 [Docker Compose](docs/en/docker-compose.md) | recommended for most home servers |
+| 🐳 [Docker](docs/en/docker.md) | `docker run`, Podman |
+| 🗄️ [NAS and container managers](docs/en/nas.md) | Synology, QNAP, Unraid, TrueNAS SCALE, Portainer |
+| 🖥️ [Proxmox VE](docs/en/proxmox.md) | its own LXC container with one script |
+| 🐧 [Debian / Ubuntu / Raspberry Pi OS](docs/en/debian.md) | without Docker, as a systemd service |
 
-## Umgebungsvariablen
+Runs on amd64 and arm64 (e.g. Raspberry Pi 4/5).
 
-| Variable | Standard | Bedeutung |
-|---|---|---|
-| `PUID` / `PGID` | `1000` | Benutzer/Gruppe, unter der Tubesy läuft und Dateien schreibt |
-| `TZ` | `Europe/Berlin` | Zeitzone |
-| `PORT` | `8080` | Port im Container |
-| `YTDLP_AUTO_UPDATE` | `true` | yt-dlp bei jedem Start aktualisieren |
-| `FORWARDED_ALLOW_IPS` | `172.16.0.0/12` | IP/Netz des Reverse-Proxys, dem `X-Forwarded-*` geglaubt wird |
-| `COOKIE_SECURE` | `auto` | `auto` setzt das Secure-Flag bei HTTPS, `true` erzwingt es |
-| `ADMIN_USERNAME` / `ADMIN_PASSWORD` | – | Admin ohne Einrichtungsassistent anlegen (nur wenn noch kein Benutzer existiert) |
+## Documentation
 
-Alle übrigen Einstellungen (Registrierungsmodus, parallele Downloads, Kontingente, Sitzungsdauer, Playlist-Limit) werden in der Weboberfläche unter **Verwaltung → Einstellungen** gepflegt.
+- [Installation overview](docs/en/installation.md)
+- [Configuration](docs/en/configuration.md)
+- [Reverse proxy and HTTPS](docs/en/reverse-proxy.md) – SWAG, Nginx Proxy Manager, Caddy, Traefik
+- [Updating](docs/en/updating.md)
+- [Usage](docs/en/usage.md)
+- [API](docs/en/api.md)
+- [Troubleshooting](docs/en/troubleshooting.md)
+- [Development](docs/en/development.md)
 
-## Öffentlich erreichbar machen (SWAG)
+## Please download responsibly
 
-Die `docker-compose.yml` ist für [SWAG](https://docs.linuxserver.io/general/swag/) vorbereitet: Tubesy hängt im Netzwerk `swag_default`, und `FORWARDED_ALLOW_IPS` vertraut den Proxy-Headern aus Docker-Netzen.
+Tubesy is a tool for saving videos you are allowed to keep – your own uploads, Creative Commons content, or what the law of your country permits for private use. Respect copyright and the terms of the sites you use.
 
-1. SWAG muss laufen, damit das Netzwerk `swag_default` existiert (sonst: `docker network create swag_default`).
-2. `docker/swag/tubesy.subdomain.conf.sample` nach `<swag-config>/nginx/proxy-confs/tubesy.subdomain.conf` kopieren.
-3. In SWAG die Subdomain ergänzen (`SUBDOMAINS=…,tubesy`) oder ein Wildcard-Zertifikat nutzen.
-4. `docker restart swag`, dann ist Tubesy unter `https://tubesy.<deine-domain>` erreichbar.
+## License
 
-Hinweise:
+[GNU Affero General Public License v3.0](LICENSE)
 
-- Registrierung auf **Nur mit Einladung** lassen (Standard).
-- Soll Tubesy nur noch über SWAG erreichbar sein, den `ports:`-Block in der Compose-Datei entfernen.
-- Das Docker-Standardnetz `bridge` lässt sich in Compose nicht mit anderen Netzen kombinieren (Docker-Einschränkung). Falls nötig, nach dem Start `docker network connect bridge tubesy` ausführen.
-- In der SWAG-Datei ist Authelia/Authentik als optionaler zusätzlicher Schutz bereits vorbereitet (auskommentiert).
+---
 
-## Fehlerbehebung
-
-**„Keine Schreibrechte auf den Download-Ordner“ / `Permission denied: '/downloads/…'`**
-Tubesy läuft im Container als `PUID`/`PGID` und muss in den eingehängten Ordner schreiben dürfen. Auf der NAS (per SSH):
-
-```sh
-id <nas-benutzer>                              # uid/gid -> PUID/PGID in der Compose-Datei
-ls -ldn /volume1/downloads/tubesy              # wem gehört der Ordner?
-sudo chown -R 1026:100 /volume1/downloads/tubesy   # eigene Werte einsetzen
-docker restart tubesy
-```
-
-Auf einer Synology alternativ in der File Station: Ordner → Eigenschaften → Berechtigung → dem Benutzer Lesen/Schreiben geben. Ob die Rechte passen, zeigt **Verwaltung → Einstellungen → System → Schreibrechte**. Ein leerer, von Docker selbst angelegter Ordner wird beim Start automatisch übernommen.
-
-## Projektstruktur
-
-```
-backend/        FastAPI-App (Python)
-  app/routers/  REST-API: auth, account, downloads, presets, admin, ws
-  app/services/ yt-dlp-Anbindung, Download-Queue, Live-Events, Einstellungen
-  tests/        End-to-End-Tests mit echtem yt-dlp gegen einen lokalen Testserver
-frontend/       SvelteKit-SPA (Svelte 5, Tailwind 4)
-docker/         Entrypoint und Healthcheck
-```
-
-yt-dlp läuft immer als eigener Prozess: Ein hängender Download blockiert nichts, Abbrechen beendet den Prozess, Teil-Dateien liegen in einem temporären Ordner und werden aufgeräumt, und ein yt-dlp-Update wirkt ohne Neustart.
-
-Presets werden in eine feste Auswahl an yt-dlp-Optionen übersetzt. Rohe yt-dlp-Argumente sind bewusst nicht möglich, weil Optionen wie `--exec` Befehle auf dem Server ausführen könnten.
-
-## Entwicklung
-
-```sh
-# Backend
-cd backend
-python -m venv .venv && . .venv/bin/activate
-pip install -r requirements.txt pytest httpx
-CONFIG_DIR=./.data/config DOWNLOAD_DIR=./.data/downloads YTDLP_AUTO_UPDATE=false uvicorn app.main:app --reload
-pytest                                # benötigt ffmpeg
-
-# Frontend (zweites Terminal, Proxy auf :8000)
-cd frontend
-npm install
-npm run dev
-npm run check
-```
-
-API-Dokumentation: `http://localhost:8000/api/docs`
-
-## Roadmap
-
-- **Phase 2 – Abos**: Playlists/Kanäle abonnieren, Prüfung alle 12 h (einstellbar), nur neue Videos laden, Filter (Shorts/Livestreams/Datum/Titel), Benachrichtigungen (ntfy, Telegram, E-Mail via Apprise)
-- **Phase 3 – Komfort**: Cookies pro Benutzer (altersbeschränkte/Mitglieder-Videos), API-Tokens für Browser-Erweiterung/iOS-Kurzbefehl, ZIP-Download ganzer Playlists
-- **Phase 4 – Extras**: 2FA (TOTP), optional OIDC/SSO, Aufräumregeln, NFO-Dateien für Jellyfin/Plex
+<p align="center">
+  Dreamed up with <span title="love">♥</span> by <a href="https://github.com/MrLuigi938">Luis Blum</a> · built with AI ✨
+</p>
