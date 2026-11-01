@@ -28,6 +28,7 @@ class PasswordBody(BaseModel):
 class ProfileBody(BaseModel):
     email: str | None = None
     default_preset_id: int | None = None
+    auto_hide_adult: bool | None = None
 
 
 @router.get("")
@@ -45,6 +46,8 @@ def update_profile(body: ProfileBody, sess: UserSession = Depends(current_sessio
             raise HTTPException(404, "Preset nicht gefunden")
     user.email = (body.email or "").strip() or None
     user.default_preset_id = body.default_preset_id
+    if body.auto_hide_adult is not None:
+        user.auto_hide_adult = body.auto_hide_adult
     db.commit()
     return user_out(user)
 

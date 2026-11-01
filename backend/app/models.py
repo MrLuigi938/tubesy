@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import JSON, BigInteger, Boolean, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, BigInteger, Boolean, DateTime, Float, ForeignKey, Integer, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
@@ -21,6 +21,8 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     quota_bytes: Mapped[int | None] = mapped_column(BigInteger)
     default_preset_id: Mapped[int | None] = mapped_column(Integer)
+    # Videos with an age limit of 18 or more are hidden on their own.
+    auto_hide_adult: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("1"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
@@ -96,6 +98,9 @@ class Download(Base):
     playlist_title: Mapped[str | None] = mapped_column(Text)
     playlist_index: Mapped[int | None] = mapped_column(Integer)
     subscription_id: Mapped[int | None] = mapped_column(Integer, index=True)
+    # Hidden videos are shown blurred and without title, and never to dashboards.
+    hidden: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("0"))
+    age_limit: Mapped[int | None] = mapped_column(Integer)
 
     # queued | downloading | processing | completed | failed | canceled
     status: Mapped[str] = mapped_column(String(16), default="queued", index=True)

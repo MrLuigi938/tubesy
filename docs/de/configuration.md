@@ -31,10 +31,13 @@ Die meisten Einstellungen nimmst du in der Weboberfläche unter **Verwaltung →
 | Anmeldung gültig | 30 Tage | mit „Angemeldet bleiben“; sonst ein Tag |
 | Mindestlänge Passwort (Benutzer) | 6 | Administratoren brauchen immer mindestens 6 |
 | Auf neue Versionen hinweisen | an | fragt zweimal am Tag bei GitHub, siehe [Aktualisieren](updating.md) |
+| Benutzer dürfen Links zu lokalen Adressen herunterladen | aus | Links wie `http://192.168.1.10/…` oder `http://nas.local/…`. Bei öffentlichen Instanzen aus lassen, sonst können Eingeladene über Tubesy Geräte in deinem Heimnetz abrufen. Administratoren dürfen es immer |
 
 **Verwaltung → Einladungen:** Registrierung *geschlossen*, *nur mit Einladung* (Standard) oder *offen*.
 
 Die Sprache wird pro Browser gewählt – bei der Einrichtung, auf der Anmeldeseite oder unter **Konto**.
+
+**Konto → Privatsphäre** (pro Benutzer): *Videos ab 18 automatisch ausblenden* (Standard: an), siehe [Ausgeblendete Videos](usage.md#ausgeblendete-videos).
 
 ## Daten und Sicherung
 

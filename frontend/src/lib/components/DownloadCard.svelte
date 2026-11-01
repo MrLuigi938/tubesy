@@ -2,14 +2,18 @@
 	import { t, tServer } from '#lib/i18n.svelte.ts';
 	import { api, errorText } from '#lib/api.ts';
 	import { bytes, duration, eta, relative } from '#lib/format.ts';
+	import { masked, reveal, shown } from '#lib/hidden.svelte.ts';
 	import { toast } from '#lib/toast.svelte.ts';
 	import type { Download } from '#lib/types.ts';
 	import Icon from './Icon.svelte';
 	import StatusBadge from './StatusBadge.svelte';
 	import Thumb from './Thumb.svelte';
 
-	let { d, showUser = false }: { d: Download; showUser?: boolean } = $props();
+	let { d: raw, showUser = false }: { d: Download; showUser?: boolean } = $props();
 	let busy = $state(false);
+	// For hidden videos: the revealed fields once "Show" was tapped.
+	const d = $derived(shown(raw));
+	const veiled = $derived(masked(raw));
 
 	const active = $derived(d.status === 'downloading' || d.status === 'processing');
 
@@ -26,11 +30,18 @@
 </script>
 
 <div class="card flex gap-3 p-3">
-	<Thumb src={d.thumbnail} mode={d.mode} class="aspect-video w-28 self-start sm:w-36" />
+	<Thumb src={d.thumbnail} mode={d.mode} masked={veiled} class="aspect-video w-28 self-start sm:w-36" />
 	<div class="min-w-0 flex-1">
 		<div class="flex items-start justify-between gap-2">
 			<div class="min-w-0">
-				<p class="truncate font-medium" title={d.title ?? d.url}>{d.title ?? d.url}</p>
+				{#if veiled}
+					<p class="flex flex-wrap items-center gap-2 font-medium text-muted">
+						{t('Ausgeblendetes Video')}
+						<button class="btn-ghost h-6 px-2 py-0 text-xs" onclick={() => run(() => reveal(d.id))}><Icon name="eye" size={13} />{t('Anzeigen')}</button>
+					</p>
+				{:else}
+					<p class="truncate font-medium" title={d.title ?? d.url}>{d.title ?? d.url}</p>
+				{/if}
 				<p class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted">
 					{#if showUser && d.username}<span class="font-medium text-text">@{d.username}</span>{/if}
 					{#if d.uploader}<span class="truncate">{d.uploader}</span>{/if}
@@ -40,6 +51,14 @@
 				</p>
 			</div>
 			<div class="flex shrink-0 items-center gap-0.5">
+				<button
+					class="btn-icon"
+					title={d.hidden ? t('Einblenden') : t('Ausblenden')}
+					disabled={busy}
+					onclick={() => run(() => api.patch(`/api/downloads/${d.id}`, { hidden: !d.hidden }))}
+				>
+					<Icon name={d.hidden ? 'eye' : 'eye-off'} size={16} />
+				</button>
 				{#if d.status === 'queued' || active}
 					<button class="btn-icon" title={t('Abbrechen')} disabled={busy} onclick={() => run(() => api.post(`/api/downloads/${d.id}/cancel`))}>
 						<Icon name="x" />

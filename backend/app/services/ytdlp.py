@@ -22,6 +22,9 @@ DEFAULT_TEMPLATE = "%(title)s [%(id)s].%(ext)s"
 PROGRESS_PREFIX = "TSPROG:"
 POST_PREFIX = "TSPOST:"
 FILE_PREFIX = "TSFILE:"
+META_PREFIX = "TSMETA:"
+# Printed once per video before the download starts (JSON object).
+META_FIELDS = "id,title,uploader,channel,duration,thumbnail,age_limit,filesize,filesize_approx,webpage_url"
 
 
 class PresetOptions(BaseModel):
@@ -98,6 +101,7 @@ def build_args(opts: PresetOptions, home: Path, temp: Path, url: str, prefix: st
         "%(info.format_id)s",
         "--progress-template", f"postprocess:{POST_PREFIX}%(progress.status)s|%(progress.postprocessor)s",
         "--print", f"after_move:{FILE_PREFIX}%(filepath)s",
+        "--print", f"video:{META_PREFIX}%(.{{{META_FIELDS}}})j",
     ]
 
     if opts.mode == "audio":
@@ -201,6 +205,7 @@ async def probe(url: str, max_items: int, timeout: float = 120) -> dict:
                 "duration": entry.get("duration"),
                 "thumbnail": _thumb(entry),
                 "uploader": entry.get("uploader") or entry.get("channel") or base["uploader"],
+                "age_limit": entry.get("age_limit"),
             })
         return {**base, "type": "playlist", "count": len(entries), "entries": entries}
 
@@ -210,6 +215,7 @@ async def probe(url: str, max_items: int, timeout: float = 120) -> dict:
         "url": info.get("webpage_url") or url,
         "video_id": info.get("id"),
         "duration": info.get("duration"),
+        "age_limit": info.get("age_limit"),
     }
 
 

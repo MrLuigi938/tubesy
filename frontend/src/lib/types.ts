@@ -8,6 +8,7 @@ export interface User {
 	is_active: boolean;
 	quota_bytes: number | null;
 	default_preset_id: number | null;
+	auto_hide_adult: boolean;
 	created_at: string | null;
 	last_login_at: string | null;
 }
@@ -41,6 +42,9 @@ export interface Download {
 	downloaded_bytes: number | null;
 	total_bytes: number | null;
 	stage: string | null;
+	/** Hidden videos come without title, thumbnail, link and file name until revealed. */
+	hidden: boolean;
+	age_limit: number | null;
 }
 
 export interface PresetOptions {
@@ -74,6 +78,7 @@ export interface ProbeEntry {
 	duration: number | null;
 	thumbnail: string | null;
 	uploader: string | null;
+	age_limit?: number | null;
 }
 
 export interface ProbeResult {
@@ -85,6 +90,7 @@ export interface ProbeResult {
 	extractor: string | null;
 	video_id?: string | null;
 	duration?: number | null;
+	age_limit?: number | null;
 	count?: number;
 	entries?: ProbeEntry[];
 }

@@ -1,5 +1,6 @@
 """Download queue: schedules queued rows onto yt-dlp subprocesses."""
 import asyncio
+import json
 import logging
 import os
 import re
@@ -17,7 +18,7 @@ from ..database import SessionLocal
 from ..models import Download, User
 from . import settings as app_settings
 from .events import hub
-from .ytdlp import FILE_PREFIX, POST_PREFIX, PROGRESS_PREFIX, PresetOptions, build_args
+from .ytdlp import FILE_PREFIX, META_PREFIX, POST_PREFIX, PROGRESS_PREFIX, PresetOptions, build_args
 
 log = logging.getLogger("tubesy.downloads")
 
@@ -74,7 +75,16 @@ def used_bytes(db: Session, user_id: int) -> int:
     return int(total or 0)
 
 
-def serialize(d: Download, live: dict | None = None) -> dict:
+QUOTA_EXCEEDED = "Speicherkontingent würde überschritten"
+ADULT_AGE = 18
+
+# What is withheld for hidden videos until they are revealed.
+_HIDDEN_FIELDS = ("url", "video_id", "title", "uploader", "thumbnail", "playlist_title", "filename")
+
+
+def serialize(d: Download, live: dict | None = None, reveal: bool = False) -> dict:
+    """The download as the API returns it. For a hidden video, title, thumbnail and
+    everything else that tells what it is stay out unless reveal is set."""
     data = {
         "id": d.id,
         "user_id": d.user_id,
@@ -103,9 +113,13 @@ def serialize(d: Download, live: dict | None = None) -> dict:
         "downloaded_bytes": None,
         "total_bytes": None,
         "stage": None,
+        "hidden": d.hidden,
+        "age_limit": d.age_limit,
     }
     if live:
         data.update(live)
+    if d.hidden and not reveal:
+        data.update(dict.fromkeys(_HIDDEN_FIELDS))
     return data
 
 
@@ -121,6 +135,7 @@ class DownloadManager:
         self._procs: dict[int, asyncio.subprocess.Process | None] = {}
         self._tasks: set[asyncio.Task] = set()
         self._cancel_requested: set[int] = set()
+        self._over_quota: set[int] = set()
         self._live: dict[int, dict] = {}
         self._wake = asyncio.Event()
         self._loop_task: asyncio.Task | None = None
@@ -228,7 +243,8 @@ class DownloadManager:
             user = d.user
 
             quota = user.quota_bytes
-            if quota is not None and used_bytes(db, user.id) >= quota:
+            quota_left = None if quota is None else quota - used_bytes(db, user.id)
+            if quota_left is not None and quota_left <= 0:
                 d.status, d.error = "failed", "Speicherkontingent erreicht"
                 d.finished_at = datetime.now(timezone.utc)
                 db.commit()
@@ -266,11 +282,13 @@ class DownloadManager:
             if download_id in self._cancel_requested:
                 proc.kill()
 
-            output_file, tail = await self._consume(d, proc)
+            output_file, tail = await self._consume(d, proc, quota_left)
             await proc.wait()
 
             d.finished_at = datetime.now(timezone.utc)
-            if download_id in self._cancel_requested:
+            if download_id in self._over_quota:
+                d.status, d.error = "failed", QUOTA_EXCEEDED
+            elif download_id in self._cancel_requested:
                 d.status, d.error = "canceled", None
             elif proc.returncode == 0 and output_file and output_file.is_file():
                 d.status, d.progress = "completed", 100.0
@@ -294,6 +312,7 @@ class DownloadManager:
         finally:
             self._procs.pop(download_id, None)
             self._cancel_requested.discard(download_id)
+            self._over_quota.discard(download_id)
             self._live.pop(download_id, None)
             shutil.rmtree(temp, ignore_errors=True)
             try:
@@ -304,10 +323,35 @@ class DownloadManager:
                 db.close()
             self.wake()
 
-    async def _consume(self, d: Download, proc: asyncio.subprocess.Process) -> tuple[Path | None, deque[str]]:
+    def _stop_over_quota(self, d: Download, proc: asyncio.subprocess.Process) -> None:
+        self._over_quota.add(d.id)
+        if proc.returncode is None:
+            proc.kill()
+
+    def _apply_meta(self, d: Download, meta: dict) -> int | None:
+        """Fills in what the check did not know (e.g. after "download anyway"),
+        hides 18+ videos if the user wants that, and returns the expected size."""
+        if not d.title or d.title == d.url:
+            d.title = meta.get("title") or d.title
+        d.uploader = d.uploader or meta.get("uploader") or meta.get("channel")
+        d.thumbnail = d.thumbnail or meta.get("thumbnail")
+        d.duration = d.duration or meta.get("duration")
+        d.video_id = d.video_id or meta.get("id")
+        age = meta.get("age_limit")
+        if isinstance(age, int):
+            d.age_limit = age
+            if age >= ADULT_AGE and d.user.auto_hide_adult:
+                d.hidden = True
+        size = meta.get("filesize") or meta.get("filesize_approx")
+        return int(size) if isinstance(size, (int, float)) else None
+
+    async def _consume(
+        self, d: Download, proc: asyncio.subprocess.Process, quota_left: int | None = None
+    ) -> tuple[Path | None, deque[str]]:
         tail: deque[str] = deque(maxlen=40)
         output_file: Path | None = None
         streams: list[str] = []
+        finished_bytes = 0.0  # earlier streams (video and audio are loaded one after the other)
         last_emit = 0.0
         live = self._live[d.id]
         db = SessionLocal.object_session(d)
@@ -334,7 +378,10 @@ class DownloadManager:
                     d.progress = round(min(100.0, done_n / total_n * 100), 1)
                 if status == "finished":
                     d.progress = 100.0
+                    finished_bytes += done_n or 0
                 live["progress"] = d.progress
+                if quota_left is not None and finished_bytes + (0 if status == "finished" else done_n or 0) > quota_left:
+                    self._stop_over_quota(d, proc)
                 # Some postprocessors (thumbnail conversion) run before the download starts.
                 if d.status == "processing":
                     d.status = "downloading"
@@ -346,6 +393,17 @@ class DownloadManager:
                         d.status = "processing"
                         db.commit()
                     live.update({"stage": _POSTPROCESSOR_LABELS.get(name, name), "speed": None, "eta": None})
+            elif line.startswith(META_PREFIX):
+                try:
+                    meta = json.loads(line[len(META_PREFIX):])
+                except ValueError:
+                    continue
+                expected = self._apply_meta(d, meta)
+                db.commit()
+                if quota_left is not None and expected and expected > quota_left:
+                    self._stop_over_quota(d, proc)
+                await self._emit(d)
+                continue
             elif line.startswith(FILE_PREFIX):
                 candidate = Path(line[len(FILE_PREFIX):]).resolve()
                 if candidate.is_relative_to(config.DOWNLOAD_DIR):

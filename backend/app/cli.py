@@ -6,7 +6,7 @@ In Docker: docker exec -it tubesy python -m app.cli reset-password <user> <new-p
 """
 import sys
 
-from .database import Base, SessionLocal, engine
+from .database import SessionLocal, prepare
 from .models import User, UserSession
 from .routers.auth import validate_password
 from .security import hash_password
@@ -18,7 +18,7 @@ def reset_password(username: str, password: str) -> int:
     except ValueError as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
-    Base.metadata.create_all(engine)
+    prepare()
     with SessionLocal() as db:
         user = db.query(User).filter_by(username=username.strip().lower()).one_or_none()
         if user is None:

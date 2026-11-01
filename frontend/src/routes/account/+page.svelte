@@ -77,6 +77,20 @@
 		}
 	}
 
+	async function setAutoHide(e: Event) {
+		const on = (e.currentTarget as HTMLInputElement).checked;
+		try {
+			session.user = await api.patch<User>('/api/account', {
+				email: session.user?.email ?? null,
+				default_preset_id: session.user?.default_preset_id ?? null,
+				auto_hide_adult: on
+			});
+			toast(t('Gespeichert'));
+		} catch (err) {
+			toast(errorText(err), 'error');
+		}
+	}
+
 	async function changePassword(e: SubmitEvent) {
 		e.preventDefault();
 		if (next !== confirmPw) return toast(t('Die neuen Passwörter stimmen nicht überein'), 'error');
@@ -160,6 +174,17 @@
 			</label>
 			<button class="btn-secondary">{t('Speichern')}</button>
 		</form>
+	</section>
+
+	<section class="card p-5 lg:order-3">
+		<h2 class="flex items-center gap-2 font-semibold"><Icon name="eye-off" size={16} />{t('Privatsphäre')}</h2>
+		<label class="mt-4 flex items-start gap-2 text-sm">
+			<input type="checkbox" class="mt-0.5" checked={session.user?.auto_hide_adult ?? true} onchange={setAutoHide} />
+			<span>
+				{t('Videos ab 18 automatisch ausblenden')}
+				<span class="hint">{t('Liefert eine Seite eine Altersfreigabe ab 18 (z. B. YouTube), wird das Video beim Herunterladen ausgeblendet: verdeckt in Tubesy und nie in Dashboards wie Heimdeck. Von Hand geht das jederzeit mit dem Auge-Symbol.')}</span>
+			</span>
+		</label>
 	</section>
 
 	<section class="card p-5">

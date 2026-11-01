@@ -5,12 +5,13 @@
 	import { page } from '$app/state';
 	import { api, setUnauthorizedHandler } from '#lib/api.ts';
 	import { appInfo, refreshInfo, updateStale } from '#lib/appinfo.svelte.ts';
+	import { hideAll } from '#lib/hidden.svelte.ts';
 	import Credit from '#lib/components/Credit.svelte';
 	import Icon, { type IconName } from '#lib/components/Icon.svelte';
 	import Toasts from '#lib/components/Toasts.svelte';
 	import { connect, connection, disconnect } from '#lib/live.svelte.ts';
 	import { refreshUser, session } from '#lib/session.svelte.ts';
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 
 	let { children } = $props();
 
@@ -95,6 +96,8 @@
 		page.url.pathname;
 		if (session.ready) guard();
 		menuOpen = false;
+		// Revealed hidden videos only stay visible in the view they were revealed in.
+		untrack(hideAll); // untracked: revealing must not re-run this effect
 	});
 
 	function toggleTheme() {

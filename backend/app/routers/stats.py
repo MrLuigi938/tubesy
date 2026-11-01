@@ -17,11 +17,14 @@ from ..deps import current_user
 from ..models import Download, Preset, User
 from ..services import settings as app_settings
 from ..services import ytdlp
-from ..services.downloads import ACTIVE, manager, serialize, used_bytes
+from ..services.downloads import ACTIVE, ADULT_AGE, manager, serialize, used_bytes
 from ..services.events import hub
+from ..services.netcheck import ensure_allowed
 from .downloads import _check_url
 
 router = APIRouter(prefix="/api/v1", tags=["dashboard api"])
+
+HIDDEN_TITLE = {"de": "Ausgeblendetes Video", "en": "Hidden video"}
 
 
 @router.get("/stats")
@@ -78,7 +81,14 @@ def queue(limit: int = 10, user: User = Depends(current_user), db: Session = Dep
     if not user.is_admin:
         q = q.filter(Download.user_id == user.id)
     rows = q.order_by(Download.status != "downloading", Download.created_at).limit(max(1, min(limit, 100))).all()
-    return [serialize(d, manager.live(d.id)) for d in rows]
+    placeholder = HIDDEN_TITLE.get(app_settings.get(db, "language"), HIDDEN_TITLE["en"])
+    out = []
+    for d in rows:
+        data = serialize(d, manager.live(d.id))
+        if d.hidden:
+            data["title"] = placeholder  # a placeholder, so counts and progress still add up
+        out.append(data)
+    return out
 
 
 class QuickDownload(BaseModel):
@@ -104,8 +114,10 @@ async def quick_download(body: QuickDownload, user: User = Depends(current_user)
     if preset is None:
         raise HTTPException(404, "Preset nicht gefunden")
 
+    await ensure_allowed(db, user, [body.url])
     max_items = int(app_settings.get(db, "max_playlist_items"))
     preset_name, options, user_id = preset.name, preset.options, user.id
+    auto_hide = user.auto_hide_adult
     db.close()  # yt-dlp can take a while; don't hold the connection
     try:
         info = await ytdlp.probe(body.url, max_items)
@@ -121,13 +133,15 @@ async def quick_download(body: QuickDownload, user: User = Depends(current_user)
             rows = [
                 Download(user_id=user_id, url=e["url"], video_id=e["video_id"], title=e["title"], uploader=e["uploader"],
                          thumbnail=e["thumbnail"], duration=e["duration"], preset_name=preset_name, options=options,
-                         subfolder=safe_component(title), playlist_title=title, playlist_index=e["index"])
+                         subfolder=safe_component(title), playlist_title=title, playlist_index=e["index"],
+                         age_limit=e.get("age_limit"), hidden=auto_hide and (e.get("age_limit") or 0) >= ADULT_AGE)
                 for e in info["entries"]
             ]
         else:
             rows = [Download(user_id=user_id, url=info["url"], video_id=info.get("video_id"), title=info["title"] or info["url"],
                              uploader=info["uploader"], thumbnail=info["thumbnail"], duration=info.get("duration"),
-                             preset_name=preset_name, options=options)]
+                             preset_name=preset_name, options=options, age_limit=info.get("age_limit"),
+                             hidden=auto_hide and (info.get("age_limit") or 0) >= ADULT_AGE)]
         s.add_all(rows)
         s.commit()
         out = [serialize(d) for d in rows]

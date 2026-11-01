@@ -6,6 +6,7 @@
 	import SupportedSites from '#lib/components/SupportedSites.svelte';
 	import Icon from '#lib/components/Icon.svelte';
 	import Thumb from '#lib/components/Thumb.svelte';
+	import { masked, reveal, shown } from '#lib/hidden.svelte.ts';
 	import { duration } from '#lib/format.ts';
 	import { applyEvent, subscribe } from '#lib/live.svelte.ts';
 	import { session } from '#lib/session.svelte.ts';
@@ -21,6 +22,9 @@
 	let result = $state<ProbeResult | null>(null);
 	let selected = $state<Set<number>>(new Set());
 	let ownFolder = $state(true);
+	// Hide the download (privacy mode); preset for 18+ when the account wants that.
+	let hideIt = $state(false);
+	let forcing = $state(false);
 	let filter = $state('');
 
 	let presets = $state<Preset[]>([]);
@@ -81,6 +85,7 @@
 		try {
 			result = await api.post<ProbeResult>('/api/probe', { url: url.trim() });
 			selected = new Set((result.entries ?? []).map((x) => x.index));
+			hideIt = !!session.user?.auto_hide_adult && (result.age_limit ?? 0) >= 18;
 		} catch (err) {
 			probeError = errorText(err);
 		} finally {
@@ -116,7 +121,8 @@
 						title: result.title,
 						uploader: result.uploader,
 						thumbnail: result.thumbnail,
-						duration: result.duration
+						duration: result.duration,
+						age_limit: result.age_limit ?? null
 					}
 				];
 		if (!items.length) return;
@@ -126,7 +132,8 @@
 				preset_id: presetId,
 				items,
 				playlist_title: isList ? result.title : null,
-				own_folder: ownFolder
+				own_folder: ownFolder,
+				hidden: hideIt
 			});
 			toast(items.length === 1 ? t('Zur Warteschlange hinzugefügt') : t('{n} Videos zur Warteschlange hinzugefügt', { n: items.length }));
 			result = null;
@@ -135,6 +142,23 @@
 			toast(errorText(err), 'error');
 		} finally {
 			submitting = false;
+		}
+	}
+
+	// The check failed, but the download itself may still work (timeouts,
+	// listings that fail while single videos work, after a yt-dlp update).
+	async function downloadAnyway() {
+		if (presetId == null || !url.trim()) return;
+		forcing = true;
+		try {
+			await api.post('/api/downloads', { preset_id: presetId, items: [{ url: url.trim() }], hidden: hideIt });
+			toast(t('Zur Warteschlange hinzugefügt – wenn es nicht klappt, steht der Grund dort.'));
+			probeError = '';
+			url = '';
+		} catch (err) {
+			toast(errorText(err), 'error');
+		} finally {
+			forcing = false;
 		}
 	}
 
@@ -171,8 +195,19 @@
 	<SupportedSites />
 
 	{#if probeError}
-		<div class="mt-3 flex items-start gap-2 rounded-lg bg-danger-soft px-3 py-2.5 text-sm text-danger">
-			<Icon name="alert" size={16} class="mt-0.5" /><span class="break-words">{probeError}</span>
+		<div class="mt-3 rounded-lg bg-danger-soft px-3 py-2.5 text-sm text-danger">
+			<div class="flex items-start gap-2"><Icon name="alert" size={16} class="mt-0.5 shrink-0" /><span class="break-words">{probeError}</span></div>
+			<div class="mt-2.5 flex flex-wrap items-center gap-2 border-t border-danger/20 pt-2.5 text-text">
+				<span class="text-xs text-muted">{t('Vielleicht klappt der Download trotzdem.')}</span>
+				<span class="ml-auto"></span>
+				<select class="input h-8 w-auto py-0.5 text-xs" bind:value={presetId} aria-label={t('Preset')}>
+					{#each presets as p (p.id)}<option value={p.id}>{p.name}</option>{/each}
+				</select>
+				<label class="flex items-center gap-1.5 text-xs"><input type="checkbox" bind:checked={hideIt} /> {t('Ausblenden')}</label>
+				<button class="btn-secondary h-8 px-3 py-1 text-xs" disabled={forcing || presetId == null} onclick={downloadAnyway}>
+					{#if forcing}<Icon name="loader" size={14} />{:else}<Icon name="download" size={14} />{/if}{t('Trotzdem herunterladen')}
+				</button>
+			</div>
 		</div>
 	{/if}
 
@@ -184,6 +219,7 @@
 					<span class="badge bg-surface-2 text-muted">
 						{result.type === 'playlist' ? t('Playlist · {n} Videos', { n: result.count ?? 0 }) : (result.extractor ?? 'Video')}
 					</span>
+					{#if (result.age_limit ?? 0) >= 18}<span class="badge ml-1 bg-danger-soft text-danger">18+</span>{/if}
 					<p class="mt-1.5 line-clamp-2 font-semibold">{result.title ?? result.url}</p>
 					<p class="mt-0.5 text-sm text-muted">
 						{result.uploader ?? ''}{#if result.duration}{result.uploader ? ' · ' : ''}{duration(result.duration)}{/if}
@@ -226,6 +262,9 @@
 						<input type="checkbox" bind:checked={ownFolder} /> {t('Eigener Ordner')}
 					</label>
 				{/if}
+				<label class="flex items-center gap-2 text-sm text-muted" title={t('Verdeckt anzeigen und nie an Dashboards wie Heimdeck geben')}>
+					<input type="checkbox" bind:checked={hideIt} /> <Icon name="eye-off" size={14} />{t('Ausblenden')}
+				</label>
 				<div class="flex gap-2 sm:ml-auto">
 					<button class="btn-ghost" onclick={() => (result = null)}>{t('Verwerfen')}</button>
 					<button class="btn-primary" disabled={submitting || (result.type === 'playlist' && !selected.size)} onclick={submit}>
@@ -268,12 +307,20 @@
 			<a href="/library" class="ml-auto text-sm font-medium text-accent hover:underline">{t('Zur Bibliothek')}</a>
 		</div>
 		<div class="space-y-2">
-			{#each recent as d (d.id)}
+			{#each recent as raw (raw.id)}
+				{@const d = shown(raw)}
 				<div class="card flex items-center gap-3 p-2.5">
-					<Thumb src={d.thumbnail} mode={d.mode} class="aspect-video w-20" />
+					<Thumb src={d.thumbnail} mode={d.mode} masked={masked(raw)} class="aspect-video w-20" />
 					<div class="min-w-0 flex-1">
-						<p class="truncate text-sm font-medium">{d.title}</p>
-						<p class="truncate text-xs text-muted">{d.filename}</p>
+						{#if masked(raw)}
+							<p class="truncate text-sm font-medium text-muted">{t('Ausgeblendetes Video')}</p>
+							<button class="text-xs font-medium text-accent hover:underline" onclick={() => reveal(d.id).catch((err) => toast(errorText(err), 'error'))}>
+								{t('Antippen zum Anzeigen')}
+							</button>
+						{:else}
+							<p class="truncate text-sm font-medium">{d.title}</p>
+							<p class="truncate text-xs text-muted">{d.filename}</p>
+						{/if}
 					</div>
 					<a class="btn-icon" href="/api/downloads/{d.id}/file" title={t('Herunterladen')}><Icon name="download" /></a>
 				</div>

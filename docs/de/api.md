@@ -24,4 +24,8 @@ curl -X POST -H "X-Api-Key: tsy_…" -H "Content-Type: application/json" \
   -d '{"url": "https://www.youtube.com/watch?v=…"}' https://tubesy.example.com/api/v1/download
 ```
 
+**Ausgeblendete Videos** gibt die API mit einem Schlüssel nie heraus: In `/api/v1/queue` erscheinen sie mit dem Titel *Ausgeblendetes Video* ohne Bild und Link, die Bibliothek (`/api/downloads`) lässt sie weg.
+
+**Lokale Adressen:** Für normale Benutzer werden Links ins lokale Netz abgelehnt, solange ein Administrator sie nicht erlaubt (*Verwaltung → Einstellungen*).
+
 Die vollständige, interaktive Dokumentation aller Endpunkte ist eingebaut: `https://<dein-tubesy>/api/docs`.

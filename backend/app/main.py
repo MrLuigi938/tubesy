@@ -7,7 +7,8 @@ from fastapi.responses import FileResponse, JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from . import config
-from .database import Base, SessionLocal, engine
+from .database import SessionLocal
+from .database import prepare as prepare_database
 from .deps import api_key_from, current_user
 from .models import Preset, User
 from .routers import account, admin, auth, downloads, presets, stats, ws
@@ -50,7 +51,8 @@ async def _auto_update() -> None:
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     config.ensure_dirs()
-    Base.metadata.create_all(engine)
+    for column in prepare_database():
+        log.info("Datenbank aktualisiert: Spalte %s ergänzt", column)
     _seed()
     if config.YTDLP_AUTO_UPDATE:
         asyncio.create_task(_auto_update())

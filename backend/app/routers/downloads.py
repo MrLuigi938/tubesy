@@ -1,11 +1,13 @@
 import mimetypes
+import secrets
+import time
 import zipfile
 from pathlib import Path
 from queue import Queue
 from threading import Event, Thread
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import func, or_
@@ -13,12 +15,13 @@ from sqlalchemy.orm import Session, joinedload
 
 from .. import config
 from ..database import get_db
-from ..deps import current_user
+from ..deps import api_key_from, current_user
 from ..models import Download, Preset, User
 from ..services import settings as app_settings
 from ..services import ytdlp
-from ..services.downloads import ACTIVE, manager, safe_component, serialize
+from ..services.downloads import ACTIVE, ADULT_AGE, FINISHED, manager, safe_component, serialize
 from ..services.events import hub
+from ..services.netcheck import ensure_allowed
 
 router = APIRouter(prefix="/api", tags=["downloads"])
 
@@ -47,6 +50,7 @@ class Item(BaseModel):
     thumbnail: str | None = Field(None, max_length=2048)
     duration: float | None = None
     index: int | None = None
+    age_limit: int | None = None
 
     @field_validator("url")
     @classmethod
@@ -59,10 +63,38 @@ class CreateBody(BaseModel):
     items: list[Item] = Field(min_length=1)
     playlist_title: str | None = Field(None, max_length=500)
     own_folder: bool = True
+    hidden: bool = False
 
 
 class ClearBody(BaseModel):
     statuses: list[Literal["failed", "canceled", "completed"]] = ["failed", "canceled"]
+
+
+class HiddenBody(BaseModel):
+    hidden: bool
+
+
+class BatchBody(BaseModel):
+    ids: list[int] = Field(min_length=1, max_length=5000)
+    action: Literal["delete", "hide", "show"]
+    delete_files: bool = True
+
+
+class PlaylistBatchBody(BaseModel):
+    titles: list[str] = Field(min_length=1, max_length=500)
+    action: Literal["delete", "hide", "show"]
+    delete_files: bool = True
+
+
+class CleanupBody(BaseModel):
+    scope: Literal["videos", "playlists", "all"]
+    delete_files: bool = True
+    dry_run: bool = True
+
+
+class ZipBody(BaseModel):
+    ids: list[int] = Field(default_factory=list, max_length=5000)
+    playlists: list[str] = Field(default_factory=list, max_length=500)
 
 
 def _visible_preset(db: Session, user: User, preset_id: int) -> Preset:
@@ -85,6 +117,7 @@ def _out(d: Download) -> dict:
 
 @router.post("/probe")
 async def probe(body: ProbeBody, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    await ensure_allowed(db, user, [body.url])
     max_items = int(app_settings.get(db, "max_playlist_items"))
     db.close()  # don't hold a connection while yt-dlp is working
     try:
@@ -99,15 +132,18 @@ async def create(body: CreateBody, user: User = Depends(current_user), db: Sessi
     max_items = int(app_settings.get(db, "max_playlist_items"))
     if len(body.items) > max_items:
         raise HTTPException(400, f"Höchstens {max_items} Einträge pro Auftrag")
+    await ensure_allowed(db, user, [item.url for item in body.items])
 
     subfolder = safe_component(body.playlist_title) if body.playlist_title and body.own_folder else None
     rows = []
     for item in body.items:
+        adult = (item.age_limit or 0) >= ADULT_AGE and user.auto_hide_adult
         rows.append(Download(
             user_id=user.id, url=item.url, video_id=item.video_id, title=item.title or item.url,
             uploader=item.uploader, thumbnail=item.thumbnail, duration=item.duration,
             preset_name=preset.name, options=preset.options, subfolder=subfolder,
             playlist_title=body.playlist_title, playlist_index=item.index if body.playlist_title else None,
+            hidden=body.hidden or adult, age_limit=item.age_limit,
         ))
     db.add_all(rows)
     db.commit()
@@ -119,7 +155,9 @@ async def create(body: CreateBody, user: User = Depends(current_user), db: Sessi
 
 @router.get("/downloads")
 def list_downloads(
+    request: Request,
     view: Literal["queue", "library", "all"] = "all",
+    hidden: Literal["include", "exclude", "only"] = "include",
     q: str | None = None,
     playlist: str | None = None,
     standalone: bool = False,
@@ -141,6 +179,13 @@ def list_downloads(
         query = query.filter(Download.status.in_(("queued", *ACTIVE, "failed", "canceled")))
     elif view == "library":
         query = query.filter(Download.status == "completed")
+    # Dashboards and scripts never see hidden videos.
+    if api_key_from(request):
+        hidden = "exclude"
+    if hidden == "exclude":
+        query = query.filter(Download.hidden.is_(False))
+    elif hidden == "only":
+        query = query.filter(Download.hidden.is_(True))
     if playlist is not None:
         query = query.filter(Download.playlist_title == playlist)
     elif standalone:
@@ -257,6 +302,126 @@ def file(download_id: int, inline: bool = False, user: User = Depends(current_us
 
 
 
+@router.get("/downloads/{download_id}")
+def get_download(download_id: int, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """One download with everything, also of a hidden one ("tap to reveal")."""
+    return serialize(_owned(db, user, download_id), manager.live(download_id), reveal=True)
+
+
+@router.patch("/downloads/{download_id}")
+async def set_hidden(download_id: int, body: HiddenBody, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    d = _owned(db, user, download_id)
+    d.hidden = body.hidden
+    db.commit()
+    await hub.publish("download", _out(d), d.user_id)
+    return _out(d)
+
+
+async def _apply(db: Session, rows: list[Download], action: str, delete_files: bool) -> dict:
+    """Deletes, hides or shows downloads; running ones are skipped when deleting."""
+    done, skipped = [], 0
+    for d in rows:
+        if action == "delete":
+            if d.status in ACTIVE or d.status == "queued":
+                skipped += 1
+                continue
+            if delete_files:
+                _delete_file(d)
+            db.delete(d)
+        else:
+            d.hidden = action == "hide"
+        done.append(d)
+    db.commit()
+    for d in done:
+        if action == "delete":
+            await hub.publish("download_removed", {"id": d.id}, d.user_id)
+        else:
+            await hub.publish("download", _out(d), d.user_id)
+    return {"done": len(done), "skipped": skipped}
+
+
+@router.post("/downloads/batch")
+async def batch(body: BatchBody, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """The same action for several downloads (selection in the library)."""
+    query = db.query(Download).filter(Download.id.in_(set(body.ids)))
+    if not user.is_admin:
+        query = query.filter(Download.user_id == user.id)
+    return await _apply(db, query.all(), body.action, body.delete_files)
+
+
+@router.post("/downloads/cleanup")
+async def cleanup(body: CleanupBody, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """Deletes all finished single videos and/or playlists of the caller.
+    With dry_run (the default) it only counts, for the second confirmation."""
+    query = db.query(Download).filter(Download.user_id == user.id, Download.status.in_(FINISHED))
+    if body.scope == "videos":
+        query = query.filter(Download.playlist_title.is_(None))
+    elif body.scope == "playlists":
+        query = query.filter(Download.playlist_title.is_not(None))
+    rows = query.all()
+    summary = {
+        "videos": sum(1 for d in rows if d.playlist_title is None),
+        "playlists": len({d.playlist_title for d in rows if d.playlist_title is not None}),
+        "playlist_videos": sum(1 for d in rows if d.playlist_title is not None),
+        "bytes": sum(d.file_size or 0 for d in rows if d.status == "completed"),
+    }
+    if body.dry_run:
+        return summary
+    result = await _apply(db, rows, "delete", body.delete_files)
+    return {**summary, "removed": result["done"]}
+
+
+# -- ZIP of a selection ----------------------------------------------------------
+
+_ZIP_TTL = 600
+_zip_jobs: dict[str, tuple[int, float, list[int], list[str]]] = {}
+
+
+@router.post("/zip")
+def prepare_zip(body: ZipBody, user: User = Depends(current_user)):
+    """Remembers a selection for a few minutes; the browser then downloads
+    /api/zip/<token> like a normal file (no huge download through fetch)."""
+    if not body.ids and not body.playlists:
+        raise HTTPException(400, "Nichts ausgewählt")
+    now = time.monotonic()
+    for key in [k for k, job in _zip_jobs.items() if job[1] < now]:
+        _zip_jobs.pop(key, None)
+    token = secrets.token_urlsafe(16)
+    _zip_jobs[token] = (user.id, now + _ZIP_TTL, body.ids, body.playlists)
+    return {"url": f"/api/zip/{token}"}
+
+
+@router.get("/zip/{token}")
+def selection_zip(token: str, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    job = _zip_jobs.get(token)
+    if job is None or job[0] != user.id or job[1] < time.monotonic():
+        raise HTTPException(404, "Download-Link abgelaufen")
+    _, _, ids, playlists = job
+    files: list[tuple[Path, str]] = []
+    seen: set[str] = set()
+    rows = db.query(Download).filter(Download.id.in_(set(ids)), Download.status == "completed")
+    if not user.is_admin:
+        rows = rows.filter(Download.user_id == user.id)
+    for d in rows.order_by(Download.finished_at.desc()).all():
+        path = _resolve_file(d)
+        if path is not None:
+            name = path.name if path.name not in seen else f"{path.stem} ({d.id}){path.suffix}"
+            seen.add(name)
+            files.append((path, name))
+    for title in playlists:
+        folder = safe_component(title)
+        files += [(path, f"{folder}/{name}") for path, name in _playlist_files(db, user, title)]
+    if not files:
+        raise HTTPException(404, "Keine fertigen Dateien in der Auswahl")
+    name = f"{safe_component(playlists[0])}.zip" if len(playlists) == 1 and not ids else "Tubesy.zip"
+    from urllib.parse import quote
+    return StreamingResponse(
+        _zip_stream(files),
+        media_type="application/zip",
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(name)}"},
+    )
+
+
 # -- playlists ---------------------------------------------------------------
 
 @router.get("/playlists")
@@ -268,7 +433,10 @@ def list_playlists(q: str | None = None, user: User = Depends(current_user), db:
         func.coalesce(func.sum(Download.file_size), 0),
         func.max(Download.finished_at),
         func.min(Download.playlist_index),
-    ).filter(Download.user_id == user.id, Download.status == "completed", Download.playlist_title.is_not(None))
+    ).filter(
+        Download.user_id == user.id, Download.status == "completed", Download.playlist_title.is_not(None),
+        Download.hidden.is_(False),
+    )
     if q:
         query = query.filter(Download.playlist_title.ilike(f"%{q.strip()}%"))
     groups = query.group_by(Download.playlist_title).order_by(func.max(Download.finished_at).desc()).all()
@@ -277,7 +445,10 @@ def list_playlists(q: str | None = None, user: User = Depends(current_user), db:
     for title, count, size, finished, first_index in groups:
         first = (
             db.query(Download)
-            .filter(Download.user_id == user.id, Download.status == "completed", Download.playlist_title == title)
+            .filter(
+                Download.user_id == user.id, Download.status == "completed", Download.playlist_title == title,
+                Download.hidden.is_(False),
+            )
             .order_by(Download.playlist_index.asc())
             .first()
         )
@@ -400,6 +571,13 @@ async def delete_playlist(title: str, delete_files: bool = True, user: User = De
     for download_id in ids:
         await hub.publish("download_removed", {"id": download_id}, user.id)
     return {"removed": len(ids)}
+
+
+@router.post("/playlists/batch")
+async def playlists_batch(body: PlaylistBatchBody, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """Deletes, hides or shows whole playlists of the caller."""
+    rows = db.query(Download).filter(Download.user_id == user.id, Download.playlist_title.in_(set(body.titles))).all()
+    return await _apply(db, rows, body.action, body.delete_files)
 
 
 # -- supported sites -----------------------------------------------------------

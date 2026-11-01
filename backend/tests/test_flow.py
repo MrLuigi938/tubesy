@@ -40,6 +40,8 @@ def test_full_flow(client: TestClient, media_url, downloads_dir):
     client.cookies.clear()
     assert client.post("/api/auth/register", json=FRIEND).status_code == 403
     login(client, ADMIN)
+    # The test media comes from 127.0.0.1, which normal users may not use by default.
+    assert client.put("/api/admin/settings", json={"allow_local_urls": True}).json()["allow_local_urls"] is True
     token = client.post("/api/admin/invites", json={"note": "Kollege", "max_uses": 1}).json()["token"]
     client.cookies.clear()
     assert client.get(f"/api/status?invite={token}").json()["invite_valid"] is True

@@ -17,6 +17,7 @@
 		max_playlist_items: number;
 		min_password_length: number;
 		update_check: boolean;
+		allow_local_urls: boolean;
 	}
 	interface System {
 		version: string;
@@ -135,6 +136,10 @@
 				<label><span class="label">{t('Standard-Kontingent neuer Benutzer (GB)')}</span><input class="input" type="number" min="0" step="0.5" bind:value={quota} placeholder={t('unbegrenzt')} /></label>
 				<label><span class="label">{t('Anmeldung gültig (Tage)')}</span><input class="input" type="number" min="1" max="365" bind:value={s.session_days} /></label>
 				<label><span class="label">{t('Mindestlänge Passwort (Benutzer)')}</span><input class="input" type="number" min="6" max="64" bind:value={s.min_password_length} /><span class="hint">{t('Gilt für normale Benutzer. Administratoren brauchen immer mindestens 6 Zeichen.')}</span></label>
+				<label class="flex items-start gap-2 text-sm sm:col-span-2">
+					<input type="checkbox" class="mt-0.5" bind:checked={s.allow_local_urls} />
+					<span>{t('Benutzer dürfen Links zu lokalen Adressen herunterladen')}<span class="hint">{t('Zum Beispiel http://192.168.1.10/video.mp4. Bei öffentlich erreichbaren Instanzen aus lassen, sonst können Eingeladene über Tubesy Geräte in deinem Heimnetz abrufen. Administratoren dürfen es immer.')}</span></span>
+				</label>
 			</div>
 			<button class="btn-primary mt-5" disabled={saving}>{#if saving}<Icon name="loader" size={16} />{/if}{t('Speichern')}</button>
 		{/if}

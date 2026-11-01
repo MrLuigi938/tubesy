@@ -16,6 +16,8 @@ DEFAULTS: dict[str, object] = {
     "update_check": True,
     # Language picked during setup (de | en); names the built-in presets.
     "language": "de",
+    # Normal users may download from addresses in the local network (admins always).
+    "allow_local_urls": False,
 }
 
 

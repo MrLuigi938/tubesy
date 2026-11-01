@@ -74,6 +74,7 @@ class SettingsBody(BaseModel):
     max_playlist_items: int | None = Field(None, ge=1, le=5000)
     min_password_length: int | None = Field(None, ge=6, le=64)
     update_check: bool | None = None
+    allow_local_urls: bool | None = None
 
 
 def _stats(db: Session) -> dict[int, dict]:
