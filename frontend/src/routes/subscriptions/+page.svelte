@@ -140,7 +140,7 @@
 	<div class="mt-4 flex flex-col gap-2 sm:flex-row">
 		<div class="relative flex-1">
 			<Icon name="rss" size={16} class="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted" />
-			<input class="input pl-9" type="url" required bind:value={url} placeholder="https://www.youtube.com/@kanal" />
+			<input class="input pl-9" type="url" required bind:value={url} placeholder={t('https://www.youtube.com/@kanal')} />
 		</div>
 		<button class="btn-primary" disabled={busy === 'new' || !url.trim()}>
 			{#if busy === 'new'}<Icon name="loader" size={16} />{t('Wird geprüft…')}{:else}<Icon name="plus" size={16} />{t('Abonnieren')}{/if}

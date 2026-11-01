@@ -2,23 +2,17 @@
 
 All notable changes to Tubesy. Versions follow [semantic versioning](https://semver.org/).
 
-## [1.2.0]
-
-Automatic.
-
-- Subscriptions: channels and playlists are checked hourly to weekly and their new videos downloaded – with preset, own folder, hiding and optionally the newest videos right away; seen videos are never fetched twice
-- Notifications when downloads are finished or failed: ntfy (with token), Telegram and the browser; one message per playlist or subscription round, hidden videos never named
-- Clean-up rules: delete your finished downloads after a number of days; administrators can keep a minimum of free space
-- Installable as an app in every Chromium browser (PNG icons, service worker); Account → App explains when HTTPS is missing
-
 ## [1.1.0]
 
-Order and privacy.
+Subscriptions, hidden videos and order.
 
+- Subscriptions: channels and playlists are checked hourly to weekly and their new videos downloaded – with preset, own folder, hiding and optionally the newest videos right away; seen videos are never fetched twice
 - Hidden videos: covered in Tubesy (no thumbnail, title or file name until tapped), a library tab of their own, never shown to dashboards like Heimdeck or the API; videos rated 18+ are hidden automatically (per user, can be turned off)
+- Notifications when downloads are finished or failed: ntfy (with token), Telegram and the browser; one message per playlist or subscription round, hidden videos never named
 - Select several videos or playlists: download as one ZIP, hide or show, delete
-- Clean up: delete all single videos, playlists or everything, with a second confirmation that shows the numbers
+- Clean up: delete all single videos, playlists or everything, with a second confirmation that shows the numbers; automatic rules by age (per user) and free space (per instance)
 - Download anyway when the check fails; the real title is filled in by yt-dlp
+- Installable as an app in every Chromium browser (PNG icons, service worker); Account → App explains when HTTPS is missing
 - The storage quota is checked before and during a download, not only at its start
 - Links to local addresses (home network) need an administrator's permission for normal users
 - Database migrations: existing installations get new fields on start

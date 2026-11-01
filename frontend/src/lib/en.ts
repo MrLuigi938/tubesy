@@ -560,4 +560,5 @@ export const en: Record<string, string> = {
 	'Kein Preset gefunden': 'No preset found',
 	'Ungültiger Abstand': 'Invalid interval',
 	'Noch kein Dienst eingerichtet': 'No service set up yet',
+	'https://www.youtube.com/@kanal': 'https://www.youtube.com/@channel',
 };
