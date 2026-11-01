@@ -23,6 +23,10 @@ class User(Base):
     default_preset_id: Mapped[int | None] = mapped_column(Integer)
     # Videos with an age limit of 18 or more are hidden on their own.
     auto_hide_adult: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("1"))
+    # ntfy / Telegram settings for "download finished" messages (see services/notify.py).
+    notify: Mapped[dict | None] = mapped_column(JSON)
+    # Finished downloads older than this many days are deleted automatically.
+    cleanup_days: Mapped[int | None] = mapped_column(Integer)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
@@ -129,3 +133,35 @@ class ApiToken(Base):
     last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     user: Mapped[User] = relationship()
+
+
+class Subscription(Base):
+    """A channel or playlist whose new videos are downloaded automatically."""
+
+    __tablename__ = "subscriptions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    url: Mapped[str] = mapped_column(Text)
+    title: Mapped[str] = mapped_column(Text)
+    thumbnail: Mapped[str | None] = mapped_column(Text)
+    preset_id: Mapped[int | None] = mapped_column(Integer)
+    own_folder: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("1"))
+    hidden: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("0"))
+    interval_hours: Mapped[int] = mapped_column(Integer, default=6, server_default=text("6"))
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("1"))
+    last_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_error: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    user: Mapped[User] = relationship()
+
+
+class SubscriptionSeen(Base):
+    """Videos a subscription already knows, so they are never queued twice
+    (also after the download was deleted)."""
+
+    __tablename__ = "subscription_seen"
+
+    subscription_id: Mapped[int] = mapped_column(ForeignKey("subscriptions.id", ondelete="CASCADE"), primary_key=True)
+    key: Mapped[str] = mapped_column(String(512), primary_key=True)  # video ID, or the URL without one
