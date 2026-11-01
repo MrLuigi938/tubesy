@@ -9,6 +9,7 @@ export interface User {
 	quota_bytes: number | null;
 	default_preset_id: number | null;
 	auto_hide_adult: boolean;
+	cleanup_days: number | null;
 	created_at: string | null;
 	last_login_at: string | null;
 }
@@ -103,4 +104,21 @@ export interface PlaylistGroup {
 	finished_at: string | null;
 	thumbnail: string | null;
 	uploader: string | null;
+}
+
+export interface Subscription {
+	id: number;
+	url: string;
+	title: string;
+	thumbnail: string | null;
+	preset_id: number | null;
+	preset_name: string | null;
+	own_folder: boolean;
+	hidden: boolean;
+	interval_hours: number;
+	enabled: boolean;
+	downloads: number;
+	last_error: string | null;
+	last_checked_at: string | null;
+	created_at: string | null;
 }

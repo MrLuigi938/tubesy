@@ -2,6 +2,15 @@
 
 All notable changes to Tubesy. Versions follow [semantic versioning](https://semver.org/).
 
+## [1.2.0]
+
+Automatic.
+
+- Subscriptions: channels and playlists are checked hourly to weekly and their new videos downloaded – with preset, own folder, hiding and optionally the newest videos right away; seen videos are never fetched twice
+- Notifications when downloads are finished or failed: ntfy (with token), Telegram and the browser; one message per playlist or subscription round, hidden videos never named
+- Clean-up rules: delete your finished downloads after a number of days; administrators can keep a minimum of free space
+- Installable as an app in every Chromium browser (PNG icons, service worker); Account → App explains when HTTPS is missing
+
 ## [1.1.0]
 
 Order and privacy.

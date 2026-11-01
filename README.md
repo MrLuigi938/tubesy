@@ -21,7 +21,10 @@
 - **Paste, check, download** – preview title and length first, then pick a preset. Live progress with speed and remaining time, cancel and retry.
 - **Playlists and channels** – choose single videos or all of them; each playlist gets its own numbered folder and can be downloaded as a ZIP later.
 - **Presets** – resolution, MP4/MKV/WebM, audio only (MP3, M4A, Opus, FLAC, WAV), subtitles, thumbnail, metadata, chapters, SponsorBlock and file name templates. Global presets plus your own.
-- **Library** – search, play in the browser, download to your device.
+- **Library** – search, play in the browser, download to your device; select several videos to download them as one ZIP or delete them, clean up in one go.
+- **Subscriptions** – new videos of channels and playlists are downloaded by themselves.
+- **Hidden videos** – covered in Tubesy and never shown to dashboards; 18+ videos are hidden automatically.
+- **Notifications** via ntfy, Telegram or the browser when downloads are done.
 - **For the whole household** – accounts with roles, invitation links, a folder per user, storage quotas and fair queueing, so one big playlist doesn't block everyone else.
 - **Safe to put online** – Argon2 passwords, HttpOnly session cookies, CSRF protection, sign-in rate limits, a session list per account and strict security headers.
 - **Always working** – yt-dlp updates itself on every start; Tubesy tells you when a new version of itself is out.

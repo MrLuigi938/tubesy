@@ -9,6 +9,8 @@
 - [Hidden videos](#hidden-videos)
 - [Selecting several videos](#selecting-several-videos)
 - [Clean up](#clean-up)
+- [Subscriptions](#subscriptions)
+- [Notifications](#notifications)
 - [Sharing from the phone](#sharing-from-the-phone)
 - [Users, invitations and quotas](#users-invitations-and-quotas)
 - [Account and sessions](#account-and-sessions)
@@ -67,6 +69,28 @@ On the phone the actions stay at the bottom of the screen.
 2. Tubesy shows what that means – *Really delete 42 videos and 3 playlists (61 GB)?* – and only then the red button deletes.
 
 Running and waiting downloads are kept. Hidden videos are included; downloads of other users never are.
+
+**Automatically:** under **Account → Clean up automatically** you can have your finished downloads deleted after a number of days (with their files, checked once an hour). Administrators can also set *Clean up when less than this is free* under *Admin → Settings*: Tubesy then deletes the oldest finished downloads of all users until there is enough room again.
+
+## Subscriptions
+
+**Subscriptions** downloads the new videos of channels and playlists by itself.
+
+1. Paste a channel or playlist link (or click **Subscribe** after checking a playlist on the download page).
+2. Choose the preset, how often Tubesy looks for new videos (hourly to weekly) and whether the newest 3–25 videos should be downloaded right away – otherwise only videos that come out from now on.
+3. With **Own folder** the videos go into a folder named after the channel and show up as a playlist in the library; **Hide** hides every new video.
+
+Tubesy remembers every video a subscription has seen, so deleted downloads are never fetched again. Subscriptions can be checked right away, paused, edited and ended – downloaded videos stay.
+
+## Notifications
+
+**Account → Notifications** sends a message when a download is finished or has failed – for a playlist or a subscription one message for all its videos. Hidden videos are never named.
+
+- **In the browser:** while Tubesy is open in the background (the browser asks for permission once).
+- **ntfy:** the topic address, e.g. `https://ntfy.sh/my-secret-topic` or your own ntfy server, optionally with an access token.
+- **Telegram:** the token of your bot (from @BotFather) and your chat ID.
+
+**Send a test** checks the settings right away.
 
 ## Sharing from the phone
 

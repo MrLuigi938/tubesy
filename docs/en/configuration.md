@@ -31,13 +31,14 @@ Most settings are made in the web interface under **Admin → Settings**. Only w
 | Sign-in valid for | 30 days | with "Stay signed in"; otherwise one day |
 | Minimum password length (users) | 6 | administrators always need at least 6 |
 | Tell me about new versions | on | asks GitHub twice a day, see [Updating](updating.md) |
+| Clean up when less than this is free | off | in GB; hourly the oldest finished downloads of all users are deleted until there is room again |
 | Users may download links to local addresses | off | links like `http://192.168.1.10/…` or `http://nas.local/…`. Keep it off on public instances, otherwise invited people can reach devices in your home network through Tubesy. Administrators always may |
 
 **Admin → Invitations:** registration *closed*, *invitation only* (default) or *open*.
 
 The language is chosen per browser – during setup, on the sign-in page or under **Account**.
 
-**Account → Privacy** (per user): *Hide videos rated 18+ automatically* (on by default), see [Hidden videos](usage.md#hidden-videos).
+**Per user under Account:** *Hide videos rated 18+ automatically* (on by default, see [Hidden videos](usage.md#hidden-videos)), [notifications](usage.md#notifications) via ntfy, Telegram or the browser, and *Clean up automatically* after a number of days.
 
 ## Data and backup
 

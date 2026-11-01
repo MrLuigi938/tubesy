@@ -18,6 +18,8 @@ DEFAULTS: dict[str, object] = {
     "language": "de",
     # Normal users may download from addresses in the local network (admins always).
     "allow_local_urls": False,
+    # Below this much free space (GB) the oldest finished downloads are deleted.
+    "cleanup_min_free_gb": None,
 }
 
 

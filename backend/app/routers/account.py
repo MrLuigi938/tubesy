@@ -9,7 +9,9 @@ from ..deps import current_session
 from ..deps import API_KEY_PREFIX
 from ..models import ApiToken, Preset, UserSession
 from ..security import hash_password, hash_token, new_token, verify_password
+from ..services import notify
 from ..services.downloads import used_bytes
+from ..services.netcheck import ensure_allowed
 from .auth import enforce_password_policy, user_out, validate_password
 
 router = APIRouter(prefix="/api/account", tags=["account"])
@@ -29,6 +31,25 @@ class ProfileBody(BaseModel):
     email: str | None = None
     default_preset_id: int | None = None
     auto_hide_adult: bool | None = None
+    cleanup_days: int | None = Field(None, ge=1, le=3650)
+    clear_cleanup_days: bool = False
+
+
+class NotifyBody(BaseModel):
+    ntfy_url: str = Field("", max_length=500)
+    ntfy_token: str | None = Field(None, max_length=500)  # None = keep, "" = remove
+    telegram_token: str | None = Field(None, max_length=200)
+    telegram_chat: str = Field("", max_length=100)
+    on_done: bool = True
+    on_failed: bool = True
+
+    @field_validator("ntfy_url")
+    @classmethod
+    def _url(cls, v: str) -> str:
+        v = v.strip()
+        if v and not v.lower().startswith(("http://", "https://")):
+            raise ValueError("Bitte eine gültige http(s)-URL angeben")
+        return v
 
 
 @router.get("")
@@ -48,6 +69,10 @@ def update_profile(body: ProfileBody, sess: UserSession = Depends(current_sessio
     user.default_preset_id = body.default_preset_id
     if body.auto_hide_adult is not None:
         user.auto_hide_adult = body.auto_hide_adult
+    if body.clear_cleanup_days:
+        user.cleanup_days = None
+    elif body.cleanup_days is not None:
+        user.cleanup_days = body.cleanup_days
     db.commit()
     return user_out(user)
 
@@ -128,3 +153,38 @@ def delete_token(token_id: int, sess: UserSession = Depends(current_session), db
     db.delete(t)
     db.commit()
     return {"ok": True}
+
+
+# -- notifications -------------------------------------------------------------
+
+@router.get("/notifications")
+def get_notifications(sess: UserSession = Depends(current_session)):
+    return notify.public(sess.user)
+
+
+@router.put("/notifications")
+async def put_notifications(body: NotifyBody, sess: UserSession = Depends(current_session), db: Session = Depends(get_db)):
+    user = sess.user
+    if body.ntfy_url:
+        await ensure_allowed(db, user, [body.ntfy_url])
+    cfg = notify.config_of(user)
+    cfg.update(ntfy_url=body.ntfy_url, telegram_chat=body.telegram_chat.strip(), on_done=body.on_done, on_failed=body.on_failed)
+    for key in notify.SECRETS:
+        value = getattr(body, key)
+        if value is not None:
+            cfg[key] = value.strip()
+    user.notify = cfg
+    db.commit()
+    return notify.public(user)
+
+
+@router.post("/notifications/test")
+async def test_notifications(sess: UserSession = Depends(current_session), db: Session = Depends(get_db)):
+    cfg = notify.config_of(sess.user)
+    if not (cfg["ntfy_url"] or (cfg["telegram_token"] and cfg["telegram_chat"])):
+        raise HTTPException(400, "Noch kein Dienst eingerichtet")
+    errors = await notify.send(cfg, "Tubesy", notify.test_text(db))
+    if errors:
+        raise HTTPException(502, " · ".join(errors))
+    return {"ok": True}
+

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import LangSwitch from '#lib/components/LangSwitch.svelte';
 	import { install, promptInstall } from '#lib/install.svelte.ts';
+	import { browserNotify, setBrowserNotify } from '#lib/browserNotify.svelte.ts';
 	import { t } from '#lib/i18n.svelte.ts';
 	import { api, errorText } from '#lib/api.ts';
 	import { copyText } from '#lib/clipboard.ts';
@@ -73,6 +74,85 @@
 		try {
 			session.user = await api.patch<User>('/api/account', { email: email || null, default_preset_id: session.user?.default_preset_id ?? null });
 			toast(t('Profil gespeichert'));
+		} catch (err) {
+			toast(errorText(err), 'error');
+		}
+	}
+
+	// -- notifications ----------------------------------------------------------
+
+	interface NotifySettings {
+		ntfy_url: string;
+		ntfy_token_set: boolean;
+		telegram_chat: string;
+		telegram_token_set: boolean;
+		on_done: boolean;
+		on_failed: boolean;
+	}
+	let notify = $state<NotifySettings | null>(null);
+	let ntfyToken = $state('');
+	let telegramToken = $state('');
+	let notifyBusy = $state(false);
+
+	onMount(async () => {
+		notify = await api.get<NotifySettings>('/api/account/notifications');
+	});
+
+	async function saveNotify(e?: SubmitEvent, clear?: 'ntfy_token' | 'telegram_token') {
+		e?.preventDefault();
+		if (!notify) return;
+		notifyBusy = true;
+		try {
+			notify = await api.put<NotifySettings>('/api/account/notifications', {
+				ntfy_url: notify.ntfy_url,
+				telegram_chat: notify.telegram_chat,
+				on_done: notify.on_done,
+				on_failed: notify.on_failed,
+				// empty field = keep the saved token
+				ntfy_token: clear === 'ntfy_token' ? '' : ntfyToken || null,
+				telegram_token: clear === 'telegram_token' ? '' : telegramToken || null
+			});
+			ntfyToken = telegramToken = '';
+			toast(t('Gespeichert'));
+		} catch (err) {
+			toast(errorText(err), 'error');
+		} finally {
+			notifyBusy = false;
+		}
+	}
+
+	async function testNotify() {
+		notifyBusy = true;
+		try {
+			await api.post('/api/account/notifications/test');
+			toast(t('Testnachricht gesendet'));
+		} catch (err) {
+			toast(errorText(err), 'error');
+		} finally {
+			notifyBusy = false;
+		}
+	}
+
+	async function toggleBrowserNotify(e: Event) {
+		const want = (e.currentTarget as HTMLInputElement).checked;
+		const on = await setBrowserNotify(want);
+		if (want && !on) toast(t('Der Browser hat Benachrichtigungen nicht erlaubt.'), 'error');
+	}
+
+	// -- clean-up rule ---------------------------------------------------------
+
+	let cleanupDays = $state(session.user?.cleanup_days ? String(session.user.cleanup_days) : '');
+
+	async function saveCleanup(e: SubmitEvent) {
+		e.preventDefault();
+		try {
+			session.user = await api.patch<User>('/api/account', {
+				email: session.user?.email ?? null,
+				default_preset_id: session.user?.default_preset_id ?? null,
+				cleanup_days: cleanupDays ? Number(cleanupDays) : null,
+				clear_cleanup_days: !cleanupDays
+			});
+			toast(t('Gespeichert'));
 		} catch (err) {
 			toast(errorText(err), 'error');
 		}
@@ -176,6 +256,52 @@
 			<button class="btn-secondary">{t('Speichern')}</button>
 		</form>
 	</section>
+
+	<form class="card p-5 lg:order-5" onsubmit={saveNotify}>
+		<h2 class="flex items-center gap-2 font-semibold"><Icon name="bell" size={16} />{t('Benachrichtigungen')}</h2>
+		<p class="mt-1 text-xs text-muted">{t('Eine Nachricht, wenn ein Download fertig ist – bei Playlists und Abos eine für alle zusammen. Ausgeblendete Videos werden nie mit Titel genannt.')}</p>
+		{#if notify}
+			<label class="mt-4 flex items-center gap-2 text-sm">
+				<input type="checkbox" checked={browserNotify.enabled} disabled={!browserNotify.supported} onchange={toggleBrowserNotify} />
+				{t('In diesem Browser, wenn Tubesy im Hintergrund ist')}
+			</label>
+			<div class="mt-4 grid gap-3 sm:grid-cols-2">
+				<label class="block sm:col-span-2"><span class="label text-xs">ntfy</span>
+					<input class="input" type="url" bind:value={notify.ntfy_url} placeholder="https://ntfy.sh/mein-thema" />
+				</label>
+				<label class="block"><span class="label text-xs">{t('ntfy-Token (optional)')}</span>
+					<input class="input" type="password" bind:value={ntfyToken} placeholder={notify.ntfy_token_set ? '••••••' : ''} autocomplete="off" />
+					{#if notify.ntfy_token_set}<button type="button" class="hint hover:text-danger" onclick={() => saveNotify(undefined, 'ntfy_token')}>{t('Token entfernen')}</button>{/if}
+				</label>
+				<span class="hidden sm:block"></span>
+				<label class="block"><span class="label text-xs">{t('Telegram-Bot-Token')}</span>
+					<input class="input" type="password" bind:value={telegramToken} placeholder={notify.telegram_token_set ? '••••••' : '123456:ABC…'} autocomplete="off" />
+					{#if notify.telegram_token_set}<button type="button" class="hint hover:text-danger" onclick={() => saveNotify(undefined, 'telegram_token')}>{t('Token entfernen')}</button>{/if}
+				</label>
+				<label class="block"><span class="label text-xs">{t('Telegram-Chat-ID')}</span>
+					<input class="input" bind:value={notify.telegram_chat} placeholder="123456789" />
+				</label>
+			</div>
+			<div class="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm">
+				<label class="flex items-center gap-2"><input type="checkbox" bind:checked={notify.on_done} /> {t('Fertige Downloads')}</label>
+				<label class="flex items-center gap-2"><input type="checkbox" bind:checked={notify.on_failed} /> {t('Fehlgeschlagene Downloads')}</label>
+			</div>
+			<div class="mt-4 flex gap-2">
+				<button class="btn-primary" disabled={notifyBusy}>{t('Speichern')}</button>
+				<button type="button" class="btn-secondary" disabled={notifyBusy} onclick={testNotify}>{t('Test senden')}</button>
+			</div>
+		{/if}
+	</form>
+
+	<form class="card p-5 lg:order-6" onsubmit={saveCleanup}>
+		<h2 class="flex items-center gap-2 font-semibold"><Icon name="sparkles" size={16} />{t('Automatisch aufräumen')}</h2>
+		<label class="mt-4 block">
+			<span class="label">{t('Fertige Downloads löschen nach (Tagen)')}</span>
+			<input class="input" type="number" min="1" max="3650" bind:value={cleanupDays} placeholder={t('nie')} />
+			<span class="hint">{t('Einmal pro Stunde löscht Tubesy deine Downloads, die älter sind – mit den Dateien. Leer lassen = nie.')}</span>
+		</label>
+		<button class="btn-secondary mt-3">{t('Speichern')}</button>
+	</form>
 
 	<section class="card p-5 lg:order-4">
 		<h2 class="flex items-center gap-2 font-semibold"><Icon name="monitor" size={16} />{t('App')}</h2>

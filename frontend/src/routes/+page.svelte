@@ -267,6 +267,11 @@
 				</label>
 				<div class="flex gap-2 sm:ml-auto">
 					<button class="btn-ghost" onclick={() => (result = null)}>{t('Verwerfen')}</button>
+					{#if result.type === 'playlist'}
+						<a class="btn-secondary" href="/subscriptions?url={encodeURIComponent(result.url)}" title={t('Neue Videos künftig von selbst herunterladen')}>
+							<Icon name="rss" size={16} />{t('Abonnieren')}
+						</a>
+					{/if}
 					<button class="btn-primary" disabled={submitting || (result.type === 'playlist' && !selected.size)} onclick={submit}>
 						{#if submitting}<Icon name="loader" size={16} />{:else}<Icon name="download" size={16} />{/if}
 						{result.type === 'playlist' ? t('{n} herunterladen', { n: selected.size }) : t('Herunterladen')}

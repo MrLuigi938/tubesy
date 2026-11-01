@@ -11,11 +11,12 @@ from .database import SessionLocal
 from .database import prepare as prepare_database
 from .deps import api_key_from, current_user
 from .models import Preset, User
-from .routers import account, admin, auth, downloads, presets, stats, ws
+from .routers import account, admin, auth, downloads, presets, stats, subscriptions, ws
 from .routers.auth import validate_password, validate_username
 from .security import hash_password
 from .services import ytdlp
 from .services.downloads import manager
+from .services.scheduler import scheduler
 from .services.updates import checker
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -58,7 +59,9 @@ async def lifespan(_app: FastAPI):
         asyncio.create_task(_auto_update())
     await manager.start()
     checker.start()
+    scheduler.start()
     yield
+    scheduler.stop()
     checker.stop()
     await manager.stop()
 
@@ -87,7 +90,7 @@ async def security_middleware(request: Request, call_next):
     return response
 
 
-for module in (auth, account, downloads, presets, admin, stats, ws):
+for module in (auth, account, downloads, presets, admin, stats, subscriptions, ws):
     app.include_router(module.router)
 
 

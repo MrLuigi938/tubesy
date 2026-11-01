@@ -18,6 +18,7 @@
 		min_password_length: number;
 		update_check: boolean;
 		allow_local_urls: boolean;
+		cleanup_min_free_gb: number | null;
 	}
 	interface System {
 		version: string;
@@ -37,6 +38,7 @@
 
 	let s = $state<Settings | null>(null);
 	let quota = $state('');
+	let minFree = $state('');
 	let sys = $state<System | null>(null);
 	let saving = $state(false);
 	let updating = $state(false);
@@ -44,6 +46,7 @@
 	onMount(async () => {
 		s = await api.get<Settings>('/api/admin/settings');
 		quota = s.default_quota_gb != null ? String(s.default_quota_gb) : '';
+		minFree = s.cleanup_min_free_gb != null ? String(s.cleanup_min_free_gb) : '';
 		sys = await api.get<System>('/api/admin/system');
 	});
 
@@ -55,7 +58,9 @@
 			s = await api.put<Settings>('/api/admin/settings', {
 				...s,
 				default_quota_gb: quota === '' ? null : Number(quota),
-				clear_default_quota: quota === ''
+				clear_default_quota: quota === '',
+				cleanup_min_free_gb: minFree === '' ? null : Number(minFree),
+				clear_cleanup_min_free: minFree === ''
 			});
 			toast(t('Einstellungen gespeichert'));
 		} catch (err) {
@@ -136,6 +141,7 @@
 				<label><span class="label">{t('Standard-Kontingent neuer Benutzer (GB)')}</span><input class="input" type="number" min="0" step="0.5" bind:value={quota} placeholder={t('unbegrenzt')} /></label>
 				<label><span class="label">{t('Anmeldung gültig (Tage)')}</span><input class="input" type="number" min="1" max="365" bind:value={s.session_days} /></label>
 				<label><span class="label">{t('Mindestlänge Passwort (Benutzer)')}</span><input class="input" type="number" min="6" max="64" bind:value={s.min_password_length} /><span class="hint">{t('Gilt für normale Benutzer. Administratoren brauchen immer mindestens 6 Zeichen.')}</span></label>
+				<label><span class="label">{t('Aufräumen, wenn weniger frei ist als (GB)')}</span><input class="input" type="number" min="1" step="1" bind:value={minFree} placeholder={t('aus')} /><span class="hint">{t('Dann löscht Tubesy stündlich die ältesten fertigen Downloads aller Benutzer, bis wieder genug frei ist.')}</span></label>
 				<label class="flex items-start gap-2 text-sm sm:col-span-2">
 					<input type="checkbox" class="mt-0.5" bind:checked={s.allow_local_urls} />
 					<span>{t('Benutzer dürfen Links zu lokalen Adressen herunterladen')}<span class="hint">{t('Zum Beispiel http://192.168.1.10/video.mp4. Bei öffentlich erreichbaren Instanzen aus lassen, sonst können Eingeladene über Tubesy Geräte in deinem Heimnetz abrufen. Administratoren dürfen es immer.')}</span></span>

@@ -75,6 +75,8 @@ class SettingsBody(BaseModel):
     min_password_length: int | None = Field(None, ge=6, le=64)
     update_check: bool | None = None
     allow_local_urls: bool | None = None
+    cleanup_min_free_gb: float | None = Field(None, gt=0)
+    clear_cleanup_min_free: bool = False
 
 
 def _stats(db: Session) -> dict[int, dict]:
@@ -218,9 +220,11 @@ def get_settings(db: Session = Depends(get_db)):
 
 @router.put("/settings")
 async def put_settings(body: SettingsBody, db: Session = Depends(get_db)):
-    values = body.model_dump(exclude_none=True, exclude={"clear_default_quota"})
+    values = body.model_dump(exclude_none=True, exclude={"clear_default_quota", "clear_cleanup_min_free"})
     if body.clear_default_quota:
         values["default_quota_gb"] = None
+    if body.clear_cleanup_min_free:
+        values["cleanup_min_free_gb"] = None
     result = app_settings.update(db, values)
     manager.wake()  # concurrency limits may have been raised
     if "update_check" in values:

@@ -9,6 +9,8 @@
 - [Ausgeblendete Videos](#ausgeblendete-videos)
 - [Mehrere Videos auswählen](#mehrere-videos-auswählen)
 - [Aufräumen](#aufräumen)
+- [Abos](#abos)
+- [Benachrichtigungen](#benachrichtigungen)
 - [Teilen vom Smartphone](#teilen-vom-smartphone)
 - [Benutzer, Einladungen und Kontingente](#benutzer-einladungen-und-kontingente)
 - [Konto und Sitzungen](#konto-und-sitzungen)
@@ -67,6 +69,28 @@ Auf dem Smartphone bleiben die Aktionen unten am Bildschirmrand.
 2. Tubesy zeigt, was das bedeutet – *Wirklich 42 Videos und 3 Playlists (61 GB) löschen?* – und erst dann löscht der rote Button.
 
 Laufende und wartende Downloads bleiben. Ausgeblendete Videos sind eingeschlossen, Downloads anderer Benutzer nie.
+
+**Automatisch:** Unter **Konto → Automatisch aufräumen** lassen sich deine fertigen Downloads nach einer Anzahl Tage löschen (mit Dateien, einmal pro Stunde geprüft). Administratoren können unter *Verwaltung → Einstellungen* zusätzlich *Aufräumen, wenn weniger frei ist als* setzen: Tubesy löscht dann die ältesten fertigen Downloads aller Benutzer, bis wieder genug Platz ist.
+
+## Abos
+
+**Abos** lädt die neuen Videos von Kanälen und Playlists von selbst herunter.
+
+1. Einen Kanal- oder Playlist-Link einfügen (oder nach dem Prüfen einer Playlist auf der Download-Seite **Abonnieren** klicken).
+2. Preset wählen, wie oft Tubesy nach neuen Videos sieht (stündlich bis wöchentlich) und ob die neuesten 3–25 Videos gleich mitkommen sollen – sonst nur Videos, die ab jetzt erscheinen.
+3. Mit **Eigener Ordner** landen die Videos in einem Ordner mit dem Namen des Kanals und erscheinen in der Bibliothek als Playlist; **Ausblenden** blendet jedes neue Video aus.
+
+Tubesy merkt sich jedes Video, das ein Abo schon kennt – gelöschte Downloads werden nie noch einmal geladen. Abos lassen sich sofort prüfen, pausieren, bearbeiten und beenden; geladene Videos bleiben.
+
+## Benachrichtigungen
+
+**Konto → Benachrichtigungen** schickt eine Nachricht, wenn ein Download fertig oder fehlgeschlagen ist – bei Playlists und Abos eine für alle Videos zusammen. Ausgeblendete Videos werden nie genannt.
+
+- **Im Browser:** solange Tubesy im Hintergrund geöffnet ist (der Browser fragt einmal nach der Erlaubnis).
+- **ntfy:** die Adresse des Themas, z. B. `https://ntfy.sh/mein-geheimes-thema` oder dein eigener ntfy-Server, wahlweise mit Zugangs-Token.
+- **Telegram:** das Token deines Bots (von @BotFather) und deine Chat-ID.
+
+**Test senden** prüft die Einstellungen sofort.
 
 ## Teilen vom Smartphone
 

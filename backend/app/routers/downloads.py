@@ -20,6 +20,8 @@ from ..models import Download, Preset, User
 from ..services import settings as app_settings
 from ..services import ytdlp
 from ..services.downloads import ACTIVE, ADULT_AGE, FINISHED, manager, safe_component, serialize
+from ..services.downloads import delete_file as _delete_file
+from ..services.downloads import resolve_file as _resolve_file
 from ..services.events import hub
 from ..services.netcheck import ensure_allowed
 
@@ -230,27 +232,6 @@ async def retry(download_id: int, user: User = Depends(current_user), db: Sessio
     await hub.publish("download", _out(d), d.user_id)
     manager.wake()
     return _out(d)
-
-
-def _resolve_file(d: Download) -> Path | None:
-    if not d.file_path:
-        return None
-    path = (config.DOWNLOAD_DIR / d.file_path).resolve()
-    if not path.is_relative_to(config.DOWNLOAD_DIR) or not path.is_file():
-        return None
-    return path
-
-
-def _delete_file(d: Download) -> None:
-    path = _resolve_file(d)
-    if path is None:
-        return
-    path.unlink(missing_ok=True)
-    # Remove an emptied playlist folder, but never the user's root folder.
-    parent = path.parent
-    root = (config.DOWNLOAD_DIR / d.user.username).resolve()
-    if parent != root and parent.is_relative_to(root) and not any(parent.iterdir()):
-        parent.rmdir()
 
 
 @router.delete("/downloads/{download_id}")

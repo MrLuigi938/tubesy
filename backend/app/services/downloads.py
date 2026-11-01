@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from .. import config
 from ..database import SessionLocal
 from ..models import Download, User
+from . import notify
 from . import settings as app_settings
 from .events import hub
 from .ytdlp import FILE_PREFIX, META_PREFIX, POST_PREFIX, PROGRESS_PREFIX, PresetOptions, build_args
@@ -123,6 +124,29 @@ def serialize(d: Download, live: dict | None = None, reveal: bool = False) -> di
     return data
 
 
+def resolve_file(d: Download) -> Path | None:
+    """The finished file of a download, if it still exists inside the download folder."""
+    if not d.file_path:
+        return None
+    path = (config.DOWNLOAD_DIR / d.file_path).resolve()
+    if not path.is_relative_to(config.DOWNLOAD_DIR) or not path.is_file():
+        return None
+    return path
+
+
+def delete_file(d: Download) -> None:
+    """Deletes the file and an emptied playlist folder."""
+    path = resolve_file(d)
+    if path is None:
+        return
+    path.unlink(missing_ok=True)
+    # Remove an emptied playlist folder, but never the user's root folder.
+    parent = path.parent
+    root = (config.DOWNLOAD_DIR / d.user.username).resolve()
+    if parent != root and parent.is_relative_to(root) and not any(parent.iterdir()):
+        parent.rmdir()
+
+
 def _num(value: str) -> float | None:
     try:
         return float(value)
@@ -162,6 +186,11 @@ class DownloadManager:
                 proc.kill()
         for task in list(self._tasks):
             task.cancel()
+
+    def _background(self, coro) -> None:
+        task = asyncio.create_task(coro)
+        self._tasks.add(task)
+        task.add_done_callback(self._tasks.discard)
 
     def wake(self) -> None:
         self._wake.set()
@@ -319,6 +348,8 @@ class DownloadManager:
                 d = db.get(Download, download_id)
                 if d is not None:
                     await self._emit(d)
+                    if d.status in ("completed", "failed"):
+                        self._background(notify.download_finished(download_id))
             finally:
                 db.close()
             self.wake()

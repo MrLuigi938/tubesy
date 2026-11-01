@@ -10,7 +10,8 @@
 	import Credit from '#lib/components/Credit.svelte';
 	import Icon, { type IconName } from '#lib/components/Icon.svelte';
 	import Toasts from '#lib/components/Toasts.svelte';
-	import { connect, connection, disconnect } from '#lib/live.svelte.ts';
+	import { connect, connection, disconnect, subscribe } from '#lib/live.svelte.ts';
+	import { onDownloadEvent } from '#lib/browserNotify.svelte.ts';
 	import { refreshUser, session } from '#lib/session.svelte.ts';
 	import { onMount, untrack } from 'svelte';
 
@@ -24,6 +25,7 @@
 	const nav: { href: string; label: string; icon: IconName; admin?: boolean }[] = [
 		{ href: '/', label: 'Downloads', icon: 'download' },
 		{ href: '/library', label: 'Bibliothek', icon: 'library' },
+		{ href: '/subscriptions', label: 'Abos', icon: 'rss' },
 		{ href: '/presets', label: 'Presets', icon: 'sliders' },
 		{ href: '/admin/users', label: 'Verwaltung', icon: 'shield', admin: true }
 	];
@@ -50,6 +52,9 @@
 
 	onMount(async () => {
 		setupInstall();
+		subscribe((e) => {
+			if (e.event === 'download') onDownloadEvent(e.data, session.user?.id);
+		});
 		try {
 			theme = (localStorage.getItem('tubesy-theme') as typeof theme) ?? null;
 		} catch {}

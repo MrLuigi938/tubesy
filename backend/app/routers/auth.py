@@ -94,6 +94,7 @@ def user_out(user: User) -> dict:
         "quota_bytes": user.quota_bytes,
         "default_preset_id": user.default_preset_id,
         "auto_hide_adult": user.auto_hide_adult,
+        "cleanup_days": user.cleanup_days,
         "created_at": user.created_at.isoformat() if user.created_at else None,
         "last_login_at": user.last_login_at.isoformat() if user.last_login_at else None,
     }

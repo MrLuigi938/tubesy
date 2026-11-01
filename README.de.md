@@ -21,7 +21,10 @@
 - **Einfügen, prüfen, herunterladen** – erst Titel und Länge sehen, dann ein Preset wählen. Live-Fortschritt mit Geschwindigkeit und Restzeit, Abbrechen und Wiederholen.
 - **Playlists und Kanäle** – einzelne Videos oder alle auswählen; jede Playlist bekommt einen eigenen nummerierten Ordner und lässt sich später als ZIP herunterladen.
 - **Presets** – Auflösung, MP4/MKV/WebM, nur Audio (MP3, M4A, Opus, FLAC, WAV), Untertitel, Vorschaubild, Metadaten, Kapitel, SponsorBlock und Dateinamen-Vorlagen. Globale Presets plus eigene.
-- **Bibliothek** – suchen, im Browser abspielen, aufs eigene Gerät laden.
+- **Bibliothek** – suchen, im Browser abspielen, aufs eigene Gerät laden; mehrere Videos auswählen, als ZIP laden oder löschen, auf einmal aufräumen.
+- **Abos** – neue Videos von Kanälen und Playlists kommen von selbst.
+- **Ausgeblendete Videos** – verdeckt in Tubesy und nie in Dashboards; 18+-Videos werden automatisch ausgeblendet.
+- **Benachrichtigungen** per ntfy, Telegram oder Browser, wenn Downloads fertig sind.
 - **Für den ganzen Haushalt** – Konten mit Rollen, Einladungslinks, ein Ordner pro Benutzer, Speicherkontingente und eine faire Warteschlange, damit eine große Playlist nicht alle anderen blockiert.
 - **Sicher im Internet** – Argon2-Passwörter, HttpOnly-Session-Cookies, CSRF-Schutz, Login-Sperre bei Fehlversuchen, Sitzungsübersicht pro Konto und strenge Security-Header.
 - **Läuft und läuft** – yt-dlp aktualisiert sich bei jedem Start; Tubesy sagt Bescheid, wenn es selbst eine neue Version gibt.
