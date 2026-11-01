@@ -38,6 +38,10 @@ Set `FORWARDED_ALLOW_IPS` to the address of your proxy (Compose: `172.16.0.0/12`
 
 After repeated wrong passwords, sign-in is blocked for 15 minutes for that user or address. Wait, or have an administrator set a new password. See also [Forgot your password?](usage.md#forgot-your-password).
 
+## "Install app" is missing
+
+Browsers only offer to install web apps over **HTTPS** (or on `localhost`). Open Tubesy through your [reverse proxy](reverse-proxy.md) with `https://…`. **Account → App** shows whether the browser offers it and explains what is missing.
+
 ## Logs
 
 ```sh

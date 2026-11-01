@@ -6,6 +6,7 @@
 	import { api, setUnauthorizedHandler } from '#lib/api.ts';
 	import { appInfo, refreshInfo, updateStale } from '#lib/appinfo.svelte.ts';
 	import { hideAll } from '#lib/hidden.svelte.ts';
+	import { setupInstall } from '#lib/install.svelte.ts';
 	import Credit from '#lib/components/Credit.svelte';
 	import Icon, { type IconName } from '#lib/components/Icon.svelte';
 	import Toasts from '#lib/components/Toasts.svelte';
@@ -48,6 +49,7 @@
 	}
 
 	onMount(async () => {
+		setupInstall();
 		try {
 			theme = (localStorage.getItem('tubesy-theme') as typeof theme) ?? null;
 		} catch {}

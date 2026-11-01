@@ -70,7 +70,7 @@ Laufende und wartende Downloads bleiben. Ausgeblendete Videos sind eingeschlosse
 
 ## Teilen vom Smartphone
 
-Tubesy lässt sich als App installieren (Browsermenü → *App installieren* / *Zum Startbildschirm*). Unter Android erscheint es dann im Teilen-Menü: ein Video aus der YouTube-App an **Tubesy** teilen, und die Prüfung startet sofort.
+Tubesy lässt sich als App installieren (Browsermenü → *App installieren* / *Zum Startbildschirm* oder **Konto → App**). Browser installieren Web-Apps nur über **HTTPS** – rufe Tubesy über deinen [Reverse Proxy](reverse-proxy.md) mit `https://` auf; über `http://<ip>:8080` im Heimnetz bieten sie höchstens eine Verknüpfung an. Unter Android erscheint es dann im Teilen-Menü: ein Video aus der YouTube-App an **Tubesy** teilen, und die Prüfung startet sofort.
 
 Am Computer geht auch ein Lesezeichen: `https://<dein-tubesy>/?url=` gefolgt vom Link öffnet Tubesy damit.
 

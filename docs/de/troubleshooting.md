@@ -38,6 +38,10 @@ Die Live-Verbindung (WebSocket) kommt nicht durch. Hinter einem Reverse Proxy m�
 
 Nach mehreren falschen Passwörtern ist die Anmeldung für diesen Benutzer bzw. diese Adresse 15 Minuten gesperrt. Warten oder von einem Administrator ein neues Passwort setzen lassen. Siehe auch [Passwort vergessen?](usage.md#passwort-vergessen).
 
+## „App installieren“ fehlt
+
+Browser bieten das Installieren von Web-Apps nur über **HTTPS** an (oder auf `localhost`). Rufe Tubesy über deinen [Reverse Proxy](reverse-proxy.md) mit `https://…` auf. **Konto → App** zeigt, ob der Browser es anbietet, und erklärt, was fehlt.
+
 ## Protokolle
 
 ```sh

@@ -70,7 +70,7 @@ Running and waiting downloads are kept. Hidden videos are included; downloads of
 
 ## Sharing from the phone
 
-Tubesy can be installed as an app (browser menu → *Install app* / *Add to Home Screen*). On Android it then appears in the share menu: share a video from the YouTube app to **Tubesy** and the check starts right away.
+Tubesy can be installed as an app (browser menu → *Install app* / *Add to Home Screen*, or **Account → App**). Browsers only install web apps over **HTTPS** – open Tubesy through your [reverse proxy](reverse-proxy.md) with `https://`; over `http://<ip>:8080` in the home network they offer a plain shortcut at most. On Android it then appears in the share menu: share a video from the YouTube app to **Tubesy** and the check starts right away.
 
 On the desktop, a bookmark works too: `https://<your-tubesy>/?url=` followed by the link opens Tubesy with it.
 

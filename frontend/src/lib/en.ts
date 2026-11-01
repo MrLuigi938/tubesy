@@ -479,4 +479,16 @@ export const en: Record<string, string> = {
 	'Nichts ausgewählt': 'Nothing selected',
 	'Download-Link abgelaufen': 'The download link has expired',
 	'Keine fertigen Dateien in der Auswahl': 'No finished files in the selection',
+
+	// installing as an app
+	'App': 'App',
+	'Tubesy läuft als App.': 'Tubesy is running as an app.',
+	'Tubesy als App auf diesem Gerät installieren – mit eigenem Symbol und, unter Android, im Teilen-Menü.':
+		'Install Tubesy as an app on this device – with its own icon and, on Android, in the share menu.',
+	'Als App installieren': 'Install as an app',
+	'Als App installieren geht nur über HTTPS.': 'Installing as an app only works over HTTPS.',
+	'Browser installieren Web-Apps nur über eine sichere Verbindung. Rufe Tubesy über deinen Reverse Proxy mit https:// auf – im Heimnetz über http:// bieten Browser höchstens eine Verknüpfung an.':
+		'Browsers only install web apps over a secure connection. Open Tubesy through your reverse proxy with https:// – over http:// in the home network, browsers offer a shortcut at most.',
+	'Im Browsermenü „App installieren“ oder „Zum Startbildschirm hinzufügen“ wählen. Auf dem iPhone: Teilen → „Zum Home-Bildschirm“.':
+		'Choose "Install app" or "Add to Home screen" in the browser menu. On the iPhone: Share → "Add to Home Screen".',
 };

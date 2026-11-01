@@ -1,5 +1,6 @@
 <script lang="ts">
 	import LangSwitch from '#lib/components/LangSwitch.svelte';
+	import { install, promptInstall } from '#lib/install.svelte.ts';
 	import { t } from '#lib/i18n.svelte.ts';
 	import { api, errorText } from '#lib/api.ts';
 	import { copyText } from '#lib/clipboard.ts';
@@ -174,6 +175,21 @@
 			</label>
 			<button class="btn-secondary">{t('Speichern')}</button>
 		</form>
+	</section>
+
+	<section class="card p-5 lg:order-4">
+		<h2 class="flex items-center gap-2 font-semibold"><Icon name="monitor" size={16} />{t('App')}</h2>
+		{#if install.installed}
+			<p class="mt-3 text-sm text-ok">✓ {t('Tubesy läuft als App.')}</p>
+		{:else if install.prompt}
+			<p class="mt-3 text-sm text-muted">{t('Tubesy als App auf diesem Gerät installieren – mit eigenem Symbol und, unter Android, im Teilen-Menü.')}</p>
+			<button class="btn-primary mt-3" onclick={promptInstall}><Icon name="download" size={16} />{t('Als App installieren')}</button>
+		{:else if !install.secure}
+			<p class="mt-3 text-sm text-warn">{t('Als App installieren geht nur über HTTPS.')}</p>
+			<p class="mt-1 text-xs text-muted">{t('Browser installieren Web-Apps nur über eine sichere Verbindung. Rufe Tubesy über deinen Reverse Proxy mit https:// auf – im Heimnetz über http:// bieten Browser höchstens eine Verknüpfung an.')}</p>
+		{:else}
+			<p class="mt-3 text-sm text-muted">{t('Im Browsermenü „App installieren“ oder „Zum Startbildschirm hinzufügen“ wählen. Auf dem iPhone: Teilen → „Zum Home-Bildschirm“.')}</p>
+		{/if}
 	</section>
 
 	<section class="card p-5 lg:order-3">
