@@ -561,4 +561,9 @@ export const en: Record<string, string> = {
 	'Ungültiger Abstand': 'Invalid interval',
 	'Noch kein Dienst eingerichtet': 'No service set up yet',
 	'https://www.youtube.com/@kanal': 'https://www.youtube.com/@channel',
+	'Zur Warteschlange hinzugefügt – Tubesy sucht notfalls selbst nach dem Video auf der Seite.': 'Added to the queue – if needed, Tubesy looks for the video on the page itself.',
+	'Tubesy kann selbst auf der Seite nach dem Video suchen.': 'Tubesy can look for the video on the page itself.',
+	'Suche Video auf der Seite': 'Looking for the video on the page',
+	'Auf der Seite wurde kein Video gefunden – vermutlich lädt sie es erst per JavaScript': 'No video found on the page – it is probably only loaded by JavaScript',
+	'Auf der Seite wurde kein Video gefunden – vermutlich lädt sie es erst per JavaScript ({error})': 'No video found on the page – it is probably only loaded by JavaScript ({error})',
 };

@@ -23,7 +23,7 @@ Unter **Downloads** einen Link einfügen und **Prüfen** klicken. Tubesy zeigt z
 
 YouTube, YouTube Music und über 1000 weitere Seiten funktionieren – **Welche Seiten werden unterstützt?** unter dem Eingabefeld listet alle auf. Direkte Links auf Video- oder Audiodateien gehen immer.
 
-**Trotzdem herunterladen:** Schlägt die Prüfung fehl (z. B. *Unsupported URL* oder Zeitüberschreitung), bietet die Fehlermeldung an, den Link trotzdem einzureihen. Der Download nutzt dieselbe Seitenerkennung von yt-dlp wie die Prüfung, klappt also nicht immer – oft aber nach Zeitüberschreitungen, bei einzelnen Videos von Playlists, deren Auflistung scheitert, oder nach einem yt-dlp-Update. Scheitert er, steht der Grund in der Warteschlange, und du kannst es später erneut versuchen. Der echte Titel wird nachgetragen, sobald yt-dlp ihn kennt.
+**Trotzdem herunterladen:** Schlägt die Prüfung fehl (z. B. *Unsupported URL* oder Zeitüberschreitung), bietet die Fehlermeldung an, den Link trotzdem einzureihen. Tubesy versucht es dann noch einmal mit yt-dlp und ruft die Seite dabei wie ein Browser ab – und wenn auch das nicht klappt, **sucht es das Video selbst auf der Seite**: in `<video>`-Tags, `og:video`-Angaben und jeder `.m3u8`-, `.mpd`-, `.mp4`-… Adresse in der Seite und ihren Skripten, auch in eingebetteten Rahmen. Was es findet, lädt es direkt herunter und benennt es nach der Seite. Nur Videos, die eine Seite erst später per JavaScript nachlädt, lassen sich so nicht finden; dann steht das in der Warteschlange.
 
 ## Playlists und Kanäle
 

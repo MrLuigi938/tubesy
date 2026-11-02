@@ -50,6 +50,11 @@ const PATTERNS: [RegExp, string, string[]][] = [
 	[/^yt-dlp beendet mit Code (-?\d+)$/, 'yt-dlp beendet mit Code {code}', ['code']],
 	[/^Download Stream (\d+)$/, 'Download Stream {n}', ['n']],
 	[
+		/^Auf der Seite wurde kein Video gefunden – vermutlich lädt sie es erst per JavaScript \(([\s\S]*)\)$/,
+		'Auf der Seite wurde kein Video gefunden – vermutlich lädt sie es erst per JavaScript ({error})',
+		['error']
+	],
+	[
 		/^Keine Schreibrechte auf den Download-Ordner \(Container läuft als UID (\d+), GID (\d+)\)\./,
 		"Keine Schreibrechte auf den Download-Ordner (Container läuft als UID {uid}, GID {gid}). Auf der NAS den Ordner diesem Benutzer geben, z. B. 'chown -R {uid}:{gid} <ordner>', oder PUID/PGID anpassen.",
 		['uid', 'gid']

@@ -16,9 +16,10 @@ from sqlalchemy.orm import Session
 from .. import config
 from ..database import SessionLocal
 from ..models import Download, User
-from . import notify
+from . import notify, sniffer
 from . import settings as app_settings
 from .events import hub
+from .netcheck import is_local
 from .ytdlp import FILE_PREFIX, META_PREFIX, POST_PREFIX, PROGRESS_PREFIX, PresetOptions, build_args
 
 log = logging.getLogger("tubesy.downloads")
@@ -77,6 +78,7 @@ def used_bytes(db: Session, user_id: int) -> int:
 
 
 QUOTA_EXCEEDED = "Speicherkontingent würde überschritten"
+NOTHING_FOUND = "Auf der Seite wurde kein Video gefunden – vermutlich lädt sie es erst per JavaScript"
 ADULT_AGE = 18
 
 # What is withheld for hidden videos until they are revealed.
@@ -294,7 +296,8 @@ class DownloadManager:
                 return
 
             prefix = f"{d.playlist_index:03d} - " if d.subfolder and d.playlist_index else ""
-            args = build_args(PresetOptions(**d.options), home, temp, d.url, prefix)
+            opts = PresetOptions(**d.options)
+            args = build_args(opts, home, temp, d.url, prefix, impersonate=d.forced)
 
             d.status, d.progress, d.error = "downloading", 0.0, None
             d.started_at = datetime.now(timezone.utc)
@@ -302,31 +305,24 @@ class DownloadManager:
             self._live[download_id] = {"stage": "Startet"}
             await self._emit(d)
 
-            proc = await asyncio.create_subprocess_exec(
-                *args, cwd=temp, stdin=asyncio.subprocess.DEVNULL,
-                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT,
-                limit=1024 * 1024,
-            )
-            self._procs[download_id] = proc
-            if download_id in self._cancel_requested:
-                proc.kill()
-
-            output_file, tail = await self._consume(d, proc, quota_left)
-            await proc.wait()
+            output_file, tail, code = await self._attempt(d, args, temp, quota_left)
+            stopped = download_id in self._cancel_requested or download_id in self._over_quota
+            if d.forced and not stopped and (code != 0 or not output_file):
+                output_file, tail, code = await self._force(d, opts, home, temp, prefix, quota_left)
 
             d.finished_at = datetime.now(timezone.utc)
             if download_id in self._over_quota:
                 d.status, d.error = "failed", QUOTA_EXCEEDED
             elif download_id in self._cancel_requested:
                 d.status, d.error = "canceled", None
-            elif proc.returncode == 0 and output_file and output_file.is_file():
+            elif code == 0 and output_file and output_file.is_file():
                 d.status, d.progress = "completed", 100.0
                 d.file_path = str(output_file.relative_to(config.DOWNLOAD_DIR))
                 d.file_size = output_file.stat().st_size
             else:
                 d.status = "failed"
                 errors = [l.removeprefix("ERROR: ") for l in tail if l.startswith("ERROR:")]
-                d.error = (errors[-1] if errors else (tail[-1] if tail else f"yt-dlp beendet mit Code {proc.returncode}"))[:2000]
+                d.error = (errors[-1] if errors else (tail[-1] if tail else f"yt-dlp beendet mit Code {code}"))[:2000]
             db.commit()
         except asyncio.CancelledError:
             raise
@@ -353,6 +349,53 @@ class DownloadManager:
             finally:
                 db.close()
             self.wake()
+
+    async def _attempt(
+        self, d: Download, args: list[str], temp: Path, quota_left: int | None
+    ) -> tuple[Path | None, deque[str], int | None]:
+        """Runs yt-dlp once; returns the file, the last output lines and the exit code."""
+        proc = await asyncio.create_subprocess_exec(
+            *args, cwd=temp, stdin=asyncio.subprocess.DEVNULL,
+            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT,
+            limit=1024 * 1024,
+        )
+        self._procs[d.id] = proc
+        if d.id in self._cancel_requested:
+            proc.kill()
+        output_file, tail = await self._consume(d, proc, quota_left)
+        await proc.wait()
+        return output_file, tail, proc.returncode
+
+    async def _force(
+        self, d: Download, opts: PresetOptions, home: Path, temp: Path, prefix: str, quota_left: int | None
+    ) -> tuple[Path | None, deque[str], int | None]:
+        """yt-dlp could not handle the page: look for media on it ourselves and
+        download what we find directly (the page goes along as referer)."""
+        live = self._live[d.id]
+        live.update({"stage": "Suche Video auf der Seite", "speed": None, "eta": None})
+        await self._emit(d)
+        try:
+            found = await asyncio.to_thread(sniffer.sniff, d.url)
+        except Exception as exc:
+            return None, deque([f"ERROR: {NOTHING_FOUND} ({exc})"]), 1
+        db = SessionLocal.object_session(d)
+        if found.title and (not d.title or d.title == d.url):
+            d.title = found.title
+            db.commit()
+        allow_local = d.user.is_admin or app_settings.get(db, "allow_local_urls")
+        tail: deque[str] = deque([f"ERROR: {NOTHING_FOUND}"])
+        for media in found.candidates:
+            if not allow_local and await is_local(media):
+                continue
+            log.info("Download %s: Video auf der Seite gefunden: %s", d.id, media)
+            live.update({"stage": "Download"})
+            args = build_args(opts, home, temp, media, prefix, referer=d.url, title=found.title)
+            output_file, tail, code = await self._attempt(d, args, temp, quota_left)
+            if code == 0 and output_file:
+                return output_file, tail, code
+            if d.id in self._cancel_requested or d.id in self._over_quota:
+                break
+        return None, tail, 1
 
     def _stop_over_quota(self, d: Download, proc: asyncio.subprocess.Process) -> None:
         self._over_quota.add(d.id)

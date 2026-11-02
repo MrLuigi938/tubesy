@@ -23,7 +23,7 @@ Paste a link on **Downloads** and click **Check**. Tubesy shows title, channel a
 
 YouTube, YouTube Music and more than 1000 other sites work – **Which sites are supported?** below the field lists all of them. Direct links to video or audio files always work.
 
-**Download anyway:** if the check fails (e.g. *Unsupported URL* or a timeout), the error box offers to queue the link anyway. The download uses the same yt-dlp site support as the check, so it won't always work – but it often does after timeouts, for single videos of playlists whose listing fails, or after a yt-dlp update. If it fails, the reason is shown in the queue and you can retry later. The real title is filled in as soon as yt-dlp knows it.
+**Download anyway:** if the check fails (e.g. *Unsupported URL* or a timeout), the error box offers to queue the link anyway. Tubesy then tries yt-dlp once more, fetching the page like a browser – and if that does not work either, it **looks for the video on the page itself**: in `<video>` tags, `og:video` metadata and any `.m3u8`, `.mpd`, `.mp4` … address in the page and its scripts, also in embedded frames. What it finds is downloaded directly and named after the page. Only videos a page loads later via JavaScript cannot be found this way; then the queue says so.
 
 ## Playlists and channels
 

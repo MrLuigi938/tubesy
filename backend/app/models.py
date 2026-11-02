@@ -105,6 +105,8 @@ class Download(Base):
     # Hidden videos are shown blurred and without title, and never to dashboards.
     hidden: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("0"))
     age_limit: Mapped[int | None] = mapped_column(Integer)
+    # "Download anyway": if yt-dlp cannot handle the page, Tubesy looks for media on it itself.
+    forced: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("0"))
 
     # queued | downloading | processing | completed | failed | canceled
     status: Mapped[str] = mapped_column(String(16), default="queued", index=True)

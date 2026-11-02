@@ -88,7 +88,15 @@ BUILTIN_NAMES_EN = {
 }
 
 
-def build_args(opts: PresetOptions, home: Path, temp: Path, url: str, prefix: str = "") -> list[str]:
+def build_args(
+    opts: PresetOptions, home: Path, temp: Path, url: str, prefix: str = "",
+    referer: str | None = None, title: str | None = None, impersonate: bool = False,
+) -> list[str]:
+    """The yt-dlp command for one download.
+
+    referer/title are for media Tubesy found on a page itself (the page is sent
+    as referer, its title names the file); impersonate makes the generic
+    extractor fetch pages like a browser."""
     args = [
         config.YTDLP_PYTHON, "-m", "yt_dlp",
         "--newline", "--progress", "--no-colors", "--no-simulate", "--no-playlist",
@@ -136,7 +144,16 @@ def build_args(opts: PresetOptions, home: Path, temp: Path, url: str, prefix: st
 
     # The prefix is literal text, so '%' has to be escaped for yt-dlp's template engine.
     # It goes in front of the file name, not in front of any sub-folders in the template.
-    folder, _, name = opts.output_template.rpartition("/")
+    if referer:
+        args += ["--referer", referer]
+    if impersonate:
+        args += ["--extractor-args", "generic:impersonate"]
+    template = opts.output_template
+    if title:
+        # Literal text for yt-dlp's template engine, and a valid file name.
+        literal = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "_", title).strip(" .")[:150] or "video"
+        template = template.replace("%(title)s", literal.replace("%", "%%"))
+    folder, _, name = template.rpartition("/")
     template = f"{folder}/" if folder else ""
     args += ["-o", template + prefix.replace("%", "%%") + name]
     args += ["--", url]
@@ -232,7 +249,7 @@ async def self_update() -> str:
     """Upgrades yt-dlp inside the running interpreter's environment."""
     proc = await asyncio.create_subprocess_exec(
         config.YTDLP_PYTHON, "-m", "pip", "install", "--no-cache-dir", "--disable-pip-version-check",
-        "-q", "-U", "yt-dlp[default]",
+        "-q", "-U", "yt-dlp[default,curl-cffi]",
         stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT,
     )
     out, _ = await proc.communicate()

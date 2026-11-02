@@ -151,8 +151,8 @@
 		if (presetId == null || !url.trim()) return;
 		forcing = true;
 		try {
-			await api.post('/api/downloads', { preset_id: presetId, items: [{ url: url.trim() }], hidden: hideIt });
-			toast(t('Zur Warteschlange hinzugefügt – wenn es nicht klappt, steht der Grund dort.'));
+			await api.post('/api/downloads', { preset_id: presetId, items: [{ url: url.trim() }], hidden: hideIt, force: true });
+			toast(t('Zur Warteschlange hinzugefügt – Tubesy sucht notfalls selbst nach dem Video auf der Seite.'));
 			probeError = '';
 			url = '';
 		} catch (err) {
@@ -198,7 +198,7 @@
 		<div class="mt-3 rounded-lg bg-danger-soft px-3 py-2.5 text-sm text-danger">
 			<div class="flex items-start gap-2"><Icon name="alert" size={16} class="mt-0.5 shrink-0" /><span class="break-words">{probeError}</span></div>
 			<div class="mt-2.5 flex flex-wrap items-center gap-2 border-t border-danger/20 pt-2.5 text-text">
-				<span class="text-xs text-muted">{t('Vielleicht klappt der Download trotzdem.')}</span>
+				<span class="text-xs text-muted">{t('Tubesy kann selbst auf der Seite nach dem Video suchen.')}</span>
 				<span class="ml-auto"></span>
 				<select class="input h-8 w-auto py-0.5 text-xs" bind:value={presetId} aria-label={t('Preset')}>
 					{#each presets as p (p.id)}<option value={p.id}>{p.name}</option>{/each}

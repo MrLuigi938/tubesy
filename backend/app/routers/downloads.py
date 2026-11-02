@@ -66,6 +66,8 @@ class CreateBody(BaseModel):
     playlist_title: str | None = Field(None, max_length=500)
     own_folder: bool = True
     hidden: bool = False
+    # "Download anyway": look for media on the page if yt-dlp does not know it.
+    force: bool = False
 
 
 class ClearBody(BaseModel):
@@ -145,7 +147,7 @@ async def create(body: CreateBody, user: User = Depends(current_user), db: Sessi
             uploader=item.uploader, thumbnail=item.thumbnail, duration=item.duration,
             preset_name=preset.name, options=preset.options, subfolder=subfolder,
             playlist_title=body.playlist_title, playlist_index=item.index if body.playlist_title else None,
-            hidden=body.hidden or adult, age_limit=item.age_limit,
+            hidden=body.hidden or adult, age_limit=item.age_limit, forced=body.force,
         ))
     db.add_all(rows)
     db.commit()
