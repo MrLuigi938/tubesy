@@ -566,4 +566,12 @@ export const en: Record<string, string> = {
 	'Suche Video auf der Seite': 'Looking for the video on the page',
 	'Auf der Seite wurde kein Video gefunden – vermutlich lädt sie es erst per JavaScript': 'No video found on the page – it is probably only loaded by JavaScript',
 	'Auf der Seite wurde kein Video gefunden – vermutlich lädt sie es erst per JavaScript ({error})': 'No video found on the page – it is probably only loaded by JavaScript ({error})',
+	'Prüfen, was fehlt': 'Check what is missing',
+	'Sichere Verbindung (HTTPS)': 'Secure connection (HTTPS)',
+	'App-Beschreibung (Manifest)': 'App description (manifest)',
+	'App-Symbole': 'App icons',
+	'Service Worker': 'Service worker',
+	'Browser bietet die Installation an': 'The browser offers to install',
+	'Tubesy erfüllt alles – dieser Browser bietet die Installation trotzdem nicht selbst an. Brave, Vivaldi und andere installieren über „Zum Startbildschirm hinzufügen“ im Menü; Chrome und Edge zeigen „App installieren“.':
+		'Tubesy meets every requirement – this browser still does not offer the install by itself. Brave, Vivaldi and others install through "Add to Home screen" in the menu; Chrome and Edge show "Install app".',
 };

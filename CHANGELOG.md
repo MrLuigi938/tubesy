@@ -6,6 +6,7 @@ All notable changes to Tubesy. Versions follow [semantic versioning](https://sem
 
 - Download anyway really forces it: if yt-dlp does not know the page, Tubesy looks for the video on it itself (video tags, og:video, stream and file addresses in the page and its scripts, embedded frames) and downloads it directly, named after the page
 - Browser impersonation for yt-dlp (curl_cffi): sites that block plain requests, e.g. Vimeo or pages behind Cloudflare, work again
+- Account → App → *Check what is missing*: shows on the device itself whether HTTPS, manifest, icons and service worker are in place and whether the browser offers to install
 
 ## [1.1.0]
 

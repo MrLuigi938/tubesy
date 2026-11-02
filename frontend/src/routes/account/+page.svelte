@@ -316,6 +316,25 @@
 		{:else}
 			<p class="mt-3 text-sm text-muted">{t('Im Browsermenü „App installieren“ oder „Zum Startbildschirm hinzufügen“ wählen. Auf dem iPhone: Teilen → „Zum Home-Bildschirm“.')}</p>
 		{/if}
+		{#if !install.installed}
+			<!-- What the browser needs, checked on this device – helps when "Install" does not show up. -->
+			<details class="mt-3 text-xs">
+				<summary class="cursor-pointer font-medium text-muted hover:text-text">{t('Prüfen, was fehlt')}</summary>
+				<ul class="mt-2 space-y-1">
+					{#each [[install.secure ? 'ok' : 'missing', 'Sichere Verbindung (HTTPS)'], [install.checks.manifest, 'App-Beschreibung (Manifest)'], [install.checks.icons, 'App-Symbole'], [install.checks.worker, 'Service Worker'], [install.checks.offered, 'Browser bietet die Installation an']] as [state, label] (label)}
+						<li class="flex items-center gap-2">
+							<span class="w-4 text-center {state === 'ok' ? 'text-ok' : state === 'missing' ? 'text-danger' : 'text-muted'}">{state === 'ok' ? '✓' : state === 'missing' ? '✗' : '…'}</span>
+							{t(label)}
+						</li>
+					{/each}
+				</ul>
+				{#if install.workerError}<p class="mt-1 break-words text-danger">{install.workerError}</p>{/if}
+				{#if install.checks.offered === 'missing' && install.secure && install.checks.manifest === 'ok' && install.checks.icons === 'ok' && install.checks.worker === 'ok'}
+					<p class="mt-2 text-muted">{t('Tubesy erfüllt alles – dieser Browser bietet die Installation trotzdem nicht selbst an. Brave, Vivaldi und andere installieren über „Zum Startbildschirm hinzufügen“ im Menü; Chrome und Edge zeigen „App installieren“.')}</p>
+				{/if}
+				<p class="mt-2 break-all text-muted">{navigator.userAgent}</p>
+			</details>
+		{/if}
 	</section>
 
 	<section class="card p-5 lg:order-3">
