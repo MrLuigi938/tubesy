@@ -40,7 +40,7 @@ Nach mehreren falschen Passwörtern ist die Anmeldung für diesen Benutzer bzw. 
 
 ## „App installieren“ fehlt
 
-Browser bieten das Installieren von Web-Apps nur über **HTTPS** an (oder auf `localhost`). Rufe Tubesy über deinen [Reverse Proxy](reverse-proxy.md) mit `https://…` auf. **Konto → App** zeigt, ob der Browser es anbietet, und erklärt, was fehlt.
+Browser bieten das Installieren von Web-Apps nur über **HTTPS** an (oder auf `localhost`). Rufe Tubesy über deinen [Reverse Proxy](reverse-proxy.md) mit `https://…` auf. **Konto → App → Prüfen, was fehlt** zeigt auf dem Gerät, was fehlt. Ein Bot-Schutz oder Login davor (Anubis, Authelia …) muss die App-Dateien durchlassen – siehe [Anubis, Authelia und andere Schutzschichten](reverse-proxy.md#anubis-authelia-und-andere-schutzschichten).
 
 ## Protokolle
 

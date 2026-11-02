@@ -14,6 +14,7 @@ Lass die Registrierung bei öffentlichen Instanzen auf **Nur mit Einladung** (St
 - [Caddy](#caddy)
 - [Traefik](#traefik)
 - [Einfaches nginx](#einfaches-nginx)
+- [Anubis, Authelia und andere Schutzschichten](#anubis-authelia-und-andere-schutzschichten)
 
 ## SWAG
 
@@ -85,3 +86,27 @@ server {
 ```
 
 Ohne Docker passt der Standard `FORWARDED_ALLOW_IPS=127.0.0.1` bereits zu einem Proxy auf demselben Rechner.
+
+## Anubis, Authelia und andere Schutzschichten
+
+Ein Bot-Schutz oder Login vor Tubesy (z. B. [Anubis](https://anubis.techaro.lol/), Authelia, Authentik, Cloudflare Access) ist kein Problem – Tubesy hat ohnehin eigene Logins. Zwei Dinge brauchen aber eine Ausnahme, weil sie **ohne** die Cookies deines Browsers abgerufen werden:
+
+- **Als App installieren:** Der Browser lädt `/manifest.webmanifest`, `/sw.js` und die Symbole ohne Anmeldung (unter Android teils über Google-Server). Antwortet der Schutz mit seiner eigenen Seite, scheitert die Installation – Android zeigt dann einen grauen Buchstaben statt des Symbols und meldet *Diese App kann nicht installiert werden*. *Konto → App → Prüfen, was fehlt* erkennt das.
+- **Dashboards und Skripte** mit API-Schlüssel (z. B. Heimdeck) rufen `/api/v1/…` auf.
+
+Bei Anubis diese Regeln oben in die `bots`-Liste deiner Richtliniendatei eintragen:
+
+```yaml
+bots:
+  # Tubesy: App-Dateien für „App installieren“ und die API für Dashboards
+  - name: tubesy-app-files
+    path_regex: ^/(manifest\.webmanifest|sw\.js|favicon\.svg|apple-touch-icon\.png|icon-[a-z0-9-]+\.png)$
+    action: ALLOW
+  - name: tubesy-api
+    path_regex: ^/api/v1/
+    action: ALLOW
+  # … deine übrigen Regeln
+```
+
+Bei Authelia/Authentik für dieselben Pfade eine *bypass*-Regel anlegen. Beide Pfade enthalten nichts Privates: Die App-Dateien sind bei jedem Tubesy gleich, und die API braucht einen Schlüssel.
+

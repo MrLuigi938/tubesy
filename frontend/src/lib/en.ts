@@ -574,4 +574,6 @@ export const en: Record<string, string> = {
 	'Browser bietet die Installation an': 'The browser offers to install',
 	'Tubesy erfüllt alles – dieser Browser bietet die Installation trotzdem nicht selbst an. Brave, Vivaldi und andere installieren über „Zum Startbildschirm hinzufügen“ im Menü; Chrome und Edge zeigen „App installieren“.':
 		'Tubesy meets every requirement – this browser still does not offer the install by itself. Brave, Vivaldi and others install through "Add to Home screen" in the menu; Chrome and Edge show "Install app".',
+	'Ein vorgeschalteter Schutz (z. B. Anubis, Authelia oder Authentik) leitet die App-Dateien auf seine eigene Seite um. Beim Installieren ruft der Browser sie ohne Anmeldung ab – nimm sie dort von der Prüfung aus: /manifest.webmanifest, /sw.js, /favicon.svg, /apple-touch-icon.png und /icon-*.png.':
+		'A protection in front (e.g. Anubis, Authelia or Authentik) redirects the app files to its own page. When installing, the browser fetches them without signing in – exempt them there: /manifest.webmanifest, /sw.js, /favicon.svg, /apple-touch-icon.png and /icon-*.png.',
 };

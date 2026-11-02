@@ -14,22 +14,34 @@ export const install = $state<{
 	// What the account page shows under "Check" – each requirement on its own.
 	checks: { manifest: Check; icons: Check; worker: Check; offered: Check };
 	workerError: string;
+	// A proxy in front (Anubis, Authelia …) answers the app files with its own page.
+	blockedByProxy: boolean;
 }>({
 	prompt: null,
 	installed: false,
 	secure: true,
 	checks: { manifest: 'pending', icons: 'pending', worker: 'pending', offered: 'pending' },
-	workerError: ''
+	workerError: '',
+	blockedByProxy: false
 });
+
+// Fetched like the browser does when installing: without cookies. A login or
+// bot protection in front then shows up as a redirect instead of the file.
+const asInstaller: RequestInit = { cache: 'no-store', credentials: 'omit', redirect: 'manual' };
 
 async function checkManifest() {
 	try {
-		const res = await fetch('/manifest.webmanifest', { cache: 'no-store' });
+		const res = await fetch('/manifest.webmanifest', asInstaller);
+		if (res.type === 'opaqueredirect' || !res.ok) {
+			install.blockedByProxy = res.type === 'opaqueredirect';
+			install.checks.manifest = install.checks.icons = 'missing';
+			return;
+		}
 		const manifest = await res.json();
 		install.checks.manifest = res.ok && manifest.start_url && manifest.display ? 'ok' : 'missing';
 		const icons: { src: string; sizes: string }[] = manifest.icons ?? [];
 		const big = icons.filter((i) => /(^|\s)(192x192|512x512)(\s|$)/.test(i.sizes));
-		const loaded = await Promise.all(big.map((i) => fetch(i.src, { cache: 'no-store' }).then((r) => r.ok && (r.headers.get('content-type') ?? '').startsWith('image/'))));
+		const loaded = await Promise.all(big.map((i) => fetch(i.src, asInstaller).then((r) => r.ok && (r.headers.get('content-type') ?? '').startsWith('image/'))));
 		install.checks.icons = loaded.length >= 2 && loaded.every(Boolean) ? 'ok' : 'missing';
 	} catch {
 		install.checks.manifest = install.checks.icons = 'missing';

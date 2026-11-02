@@ -40,7 +40,7 @@ After repeated wrong passwords, sign-in is blocked for 15 minutes for that user 
 
 ## "Install app" is missing
 
-Browsers only offer to install web apps over **HTTPS** (or on `localhost`). Open Tubesy through your [reverse proxy](reverse-proxy.md) with `https://…`. **Account → App** shows whether the browser offers it and explains what is missing.
+Browsers only offer to install web apps over **HTTPS** (or on `localhost`). Open Tubesy through your [reverse proxy](reverse-proxy.md) with `https://…`. **Account → App → Check what is missing** shows on the device what is missing. A bot protection or login in front (Anubis, Authelia …) must let the app files through – see [Anubis, Authelia and other protections](reverse-proxy.md#anubis-authelia-and-other-protections).
 
 ## Logs
 

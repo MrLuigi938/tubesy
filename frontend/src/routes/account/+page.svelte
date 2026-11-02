@@ -329,6 +329,9 @@
 					{/each}
 				</ul>
 				{#if install.workerError}<p class="mt-1 break-words text-danger">{install.workerError}</p>{/if}
+				{#if install.blockedByProxy}
+					<p class="mt-2 text-warn">{t('Ein vorgeschalteter Schutz (z. B. Anubis, Authelia oder Authentik) leitet die App-Dateien auf seine eigene Seite um. Beim Installieren ruft der Browser sie ohne Anmeldung ab – nimm sie dort von der Prüfung aus: /manifest.webmanifest, /sw.js, /favicon.svg, /apple-touch-icon.png und /icon-*.png.')}</p>
+				{/if}
 				{#if install.checks.offered === 'missing' && install.secure && install.checks.manifest === 'ok' && install.checks.icons === 'ok' && install.checks.worker === 'ok'}
 					<p class="mt-2 text-muted">{t('Tubesy erfüllt alles – dieser Browser bietet die Installation trotzdem nicht selbst an. Brave, Vivaldi und andere installieren über „Zum Startbildschirm hinzufügen“ im Menü; Chrome und Edge zeigen „App installieren“.')}</p>
 				{/if}
