@@ -91,6 +91,7 @@ BUILTIN_NAMES_EN = {
 def build_args(
     opts: PresetOptions, home: Path, temp: Path, url: str, prefix: str = "",
     referer: str | None = None, title: str | None = None, impersonate: bool = False,
+    user_agent: str | None = None, cookies: Path | None = None,
 ) -> list[str]:
     """The yt-dlp command for one download.
 
@@ -146,6 +147,10 @@ def build_args(
     # It goes in front of the file name, not in front of any sub-folders in the template.
     if referer:
         args += ["--referer", referer]
+    if user_agent:
+        args += ["--user-agent", user_agent]
+    if cookies:
+        args += ["--cookies", str(cookies)]
     if impersonate:
         args += ["--extractor-args", "generic:impersonate"]
     template = opts.output_template

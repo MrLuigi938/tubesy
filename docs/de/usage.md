@@ -23,7 +23,13 @@ Unter **Downloads** einen Link einfügen und **Prüfen** klicken. Tubesy zeigt z
 
 YouTube, YouTube Music und über 1000 weitere Seiten funktionieren – **Welche Seiten werden unterstützt?** unter dem Eingabefeld listet alle auf. Direkte Links auf Video- oder Audiodateien gehen immer.
 
-**Trotzdem herunterladen:** Schlägt die Prüfung fehl (z. B. *Unsupported URL* oder Zeitüberschreitung), bietet die Fehlermeldung an, den Link trotzdem einzureihen. Tubesy versucht es dann noch einmal mit yt-dlp und ruft die Seite dabei wie ein Browser ab – und wenn auch das nicht klappt, **sucht es das Video selbst auf der Seite**: in `<video>`-Tags, `og:video`-Angaben und jeder `.m3u8`-, `.mpd`-, `.mp4`-… Adresse in der Seite und ihren Skripten, auch in eingebetteten Rahmen. Was es findet, lädt es direkt herunter und benennt es nach der Seite. Nur Videos, die eine Seite erst später per JavaScript nachlädt, lassen sich so nicht finden; dann steht das in der Warteschlange.
+**Trotzdem herunterladen:** Schlägt die Prüfung fehl (z. B. *Unsupported URL* oder Zeitüberschreitung), bietet die Fehlermeldung an, den Link trotzdem einzureihen. Tubesy geht dann Schritt für Schritt vor:
+
+1. **yt-dlp** noch einmal, die Seite wird dabei wie von einem Browser abgerufen.
+2. **Ein echter Browser:** Tubesy öffnet die Seite in einem Chromium im Hintergrund, startet den Player (stumm) und schaut mit, welche Streams (`.m3u8`, `.mpd`) oder Videodateien er lädt – auch in eingebetteten Playern. Der beste Fund wird mit den Cookies des Browsers und der Seite als Referer geladen. So werden auch Videos gefunden, die erst JavaScript zusammensetzt.
+3. **Der Seitenquelltext:** `<video>`-Tags, `og:video`-Angaben sowie Stream- und Dateiadressen in der Seite und ihren Skripten – der Rückfall, wenn kein Browser vorhanden ist.
+
+Die Datei wird nach der Seite benannt. Die Warteschlange zeigt jeden Schritt; wird nichts gefunden, steht das dort. **DRM-geschützte Streams** (Netflix, Disney+, Prime Video …) sind verschlüsselt und lassen sich nicht herunterladen.
 
 ## Playlists und Kanäle
 

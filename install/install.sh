@@ -61,6 +61,15 @@ if ! command -v deno >/dev/null 2>&1; then
   rm -rf "$tmp"
 fi
 
+# Chromium lets "Download anyway" watch a page play its video. Optional: Ubuntu
+# only ships it as a snap, which does not run as a service – then it is skipped.
+if ! command -v chromium >/dev/null 2>&1 && ! grep -q '^ID=ubuntu' /etc/os-release 2>/dev/null; then
+  say "Installing Chromium (for \"Download anyway\") …"
+  apt-get install -y -qq chromium fonts-liberation >/dev/null 2>&1 ||
+    apt-get install -y -qq chromium-browser >/dev/null 2>&1 ||
+    say "Note: Chromium could not be installed – \"Download anyway\" then only searches the page source."
+fi
+
 # ---- Program ----
 
 tmp=$(mktemp -d)

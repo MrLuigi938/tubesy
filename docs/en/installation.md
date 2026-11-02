@@ -15,7 +15,7 @@ After installing, open `http://<your-server>:8080` and create the administrator 
 | Proxmox VE | its own LXC container, created by a script | [Proxmox VE](proxmox.md) |
 | Debian, Ubuntu, Raspberry Pi OS – without Docker | an install script with a systemd service | [Debian / Ubuntu](debian.md) |
 
-What is included in every variant: yt-dlp (updated on every start), ffmpeg for merging and converting, and Deno, which yt-dlp needs for YouTube.
+What is included in every variant: yt-dlp (updated on every start), ffmpeg for merging and converting, Deno, which yt-dlp needs for YouTube, and – in the Docker image and on Debian – a headless Chromium for *Download anyway*.
 
 ## After the installation
 
@@ -27,6 +27,6 @@ What is included in every variant: yt-dlp (updated on every start), ffmpeg for m
 
 ## Requirements
 
-- 1 CPU core and 512 MB RAM are enough; converting (e.g. to MP3 or MKV) and several parallel downloads like 2 cores and 1 GB.
+- 1 CPU core and 1 GB RAM are enough; converting (e.g. to MP3 or MKV), several parallel downloads and the browser for *Download anyway* like 2 cores and 2 GB.
 - Disk space for your videos. Point the download folder at a share or a large disk.
 - Outgoing internet access (to the video sites and, for the update hint, to GitHub).

@@ -3,3 +3,4 @@ uvicorn[standard]>=0.30
 sqlalchemy>=2.0
 argon2-cffi>=23.1
 yt-dlp[default,curl-cffi]
+playwright>=1.48

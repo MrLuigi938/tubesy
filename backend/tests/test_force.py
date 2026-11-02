@@ -38,8 +38,14 @@ def pages(media_url):
     (media / "frame.html").write_text(
         '<html><head><title>Mit Rahmen</title></head><body><iframe src="player.html"></iframe></body></html>', encoding="utf-8")
     (media / "empty.html").write_text("<html><head><title>Leer</title></head><body>nichts</body></html>", encoding="utf-8")
+    # The address only exists at runtime – no media URL anywhere in the source.
+    (media / "jsplayer.html").write_text(
+        '<html><head><title>JS Film</title></head><body><video id="v" muted playsinline></video><script>'
+        'const parts = ["cl", "ip", ".", "m", "p", "4"];'
+        'setTimeout(() => { document.getElementById("v").src = parts.join(""); }, 300);'
+        '</script></body></html>', encoding="utf-8")
     base = media_url.rsplit("/", 1)[0]
-    return {name: f"{base}/{name}.html" for name in ("player", "frame", "empty")}
+    return {name: f"{base}/{name}.html" for name in ("player", "frame", "empty", "jsplayer")}
 
 
 def queue(client, url, force):
@@ -70,3 +76,35 @@ def test_download_anyway_finds_the_video_on_the_page(client: TestClient, pages):
     # Nothing on the page: a clear message instead of yt-dlp's.
     d = wait_for(client, queue(client, pages["empty"], force=True))
     assert d["status"] == "failed" and d["error"].startswith("Auf der Seite wurde kein Video gefunden")
+
+
+def test_browser_finds_videos_that_only_javascript_loads(client: TestClient, pages, monkeypatch):
+    from app.services import browser, sniffer
+
+    if not browser.available():
+        pytest.skip("no Chromium for the headless browser")
+    login_ip_limiter._hits.clear()
+    login_user_limiter._hits.clear()
+    login(client, ADMIN)
+    # The page source has nothing – only the running page knows the video.
+    assert sniffer.find_media(pages["jsplayer"], (conftest._tmp / "media" / "jsplayer.html").read_text()) == []
+    d = wait_for(client, queue(client, pages["jsplayer"], force=True), timeout=120)
+    assert d["status"] == "completed", d["error"]
+    assert d["title"] == "JS Film"
+
+
+def test_browser_respects_the_local_address_guard(pages):
+    import asyncio
+
+    from app.services import browser
+
+    if not browser.available():
+        pytest.skip("no Chromium for the headless browser")
+
+    # The page itself was checked before; what the player loads goes through the guard.
+    async def media_blocked(url):
+        return url.endswith(".mp4")
+
+    cap = asyncio.run(browser.capture(pages["jsplayer"], media_blocked))
+    assert cap.media == [] and cap.title == "JS Film"
+

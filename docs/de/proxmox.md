@@ -19,7 +19,7 @@ Vor den Befehl setzen, z. B. `CTID=120 IP=192.168.1.50/24 GATEWAY=192.168.1.1 sh
 |---|---|---|
 | `CTID` | nächste freie ID | Container-ID |
 | `CT_HOSTNAME` | `tubesy` (wird gefragt) | Name des Containers |
-| `CORES` / `MEMORY` | `2` / `1024` | CPU-Kerne, RAM in MB |
+| `CORES` / `MEMORY` | `2` / `2048` | CPU-Kerne, RAM in MB (der Browser für *Trotzdem herunterladen* mag 2 GB) |
 | `DISK` | `8` | Plattengröße in GB – hier landen die Downloads, außer `HOST_DOWNLOADS` ist gesetzt |
 | `STORAGE` | erster Container-Speicher | wo die Platte angelegt wird |
 | `BRIDGE` | `vmbr0` | Netzwerk-Bridge |

@@ -11,7 +11,7 @@ sudo sh install.sh
 
 The script
 
-1. installs Python, ffmpeg and Deno (JavaScript runtime that yt-dlp needs for YouTube),
+1. installs Python, ffmpeg, Deno (JavaScript runtime that yt-dlp needs for YouTube) and – except on Ubuntu, where it only exists as a snap – Chromium for *Download anyway*,
 2. downloads the newest release to `/opt/tubesy` and creates a Python environment for it,
 3. creates the system user `tubesy`, the data folder `/var/lib/tubesy` and the service `tubesy`,
 4. prints the address – open it and create the administrator account.

@@ -28,6 +28,7 @@
 		ytdlp_version: string;
 		ffmpeg: boolean;
 		deno: boolean;
+		browser: boolean;
 		download_dir: string;
 		download_dir_writable: boolean;
 		disk_total: number;
@@ -211,6 +212,7 @@
 				</div>
 				<div class="flex justify-between"><dt class="text-muted">ffmpeg</dt><dd class={sys.ffmpeg ? 'text-ok' : 'text-danger'}>{sys.ffmpeg ? t('vorhanden') : t('fehlt')}</dd></div>
 				<div class="flex justify-between"><dt class="text-muted">{t('Deno (für YouTube)')}</dt><dd class={sys.deno ? 'text-ok' : 'text-warn'}>{sys.deno ? t('vorhanden') : t('fehlt')}</dd></div>
+				<div class="flex justify-between"><dt class="text-muted">{t('Browser (für „Trotzdem herunterladen“)')}</dt><dd class={sys.browser ? 'text-ok' : 'text-warn'}>{sys.browser ? t('vorhanden') : t('fehlt')}</dd></div>
 				<div class="flex justify-between gap-4"><dt class="text-muted">{t('Download-Ordner')}</dt><dd class="truncate font-mono text-xs">{sys.download_dir}</dd></div>
 				<div class="flex justify-between"><dt class="text-muted">{t('Schreibrechte')}</dt><dd class={sys.download_dir_writable ? 'text-ok' : 'text-danger'}>{sys.download_dir_writable ? t('vorhanden') : t('fehlen – PUID/PGID bzw. Ordnerrechte prüfen')}</dd></div>
 				<div>

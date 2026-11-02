@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 from .. import config
 from ..database import SessionLocal
 from ..models import Download, User
-from . import notify, sniffer
+from . import browser, notify, sniffer
 from . import settings as app_settings
 from .events import hub
 from .netcheck import is_local
@@ -372,18 +372,46 @@ class DownloadManager:
         """yt-dlp could not handle the page: look for media on it ourselves and
         download what we find directly (the page goes along as referer)."""
         live = self._live[d.id]
+        db = SessionLocal.object_session(d)
+        allow_local = d.user.is_admin or app_settings.get(db, "allow_local_urls")
+        tail: deque[str] = deque([f"ERROR: {NOTHING_FOUND}"])
+
+        def name_after(title: str | None) -> None:
+            if title and (not d.title or d.title == d.url):
+                d.title = title
+                db.commit()
+
+        # 1. A real browser plays the page and we watch which streams it loads.
+        if browser.available():
+            live.update({"stage": "Öffne die Seite im Browser", "speed": None, "eta": None})
+            await self._emit(d)
+            try:
+                cap = await browser.capture(d.url, None if allow_local else is_local)
+            except Exception as exc:
+                log.warning("Download %s: Browser fehlgeschlagen: %s", d.id, exc)
+                cap = None
+            if cap is not None:
+                name_after(cap.title)
+                cookies = browser.write_cookies(cap.cookies, temp / "cookies.txt") if cap.cookies else None
+                for media in cap.media[:4]:
+                    log.info("Download %s: Browser hat %s geladen", d.id, media.url)
+                    live.update({"stage": "Download"})
+                    args = build_args(opts, home, temp, media.url, prefix, referer=d.url, title=d.title,
+                                      user_agent=cap.user_agent, cookies=cookies)
+                    output_file, tail, code = await self._attempt(d, args, temp, quota_left)
+                    if code == 0 and output_file:
+                        return output_file, tail, code
+                    if d.id in self._cancel_requested or d.id in self._over_quota:
+                        return None, tail, 1
+
+        # 2. The page source: video tags, og:video, stream addresses in scripts and iframes.
         live.update({"stage": "Suche Video auf der Seite", "speed": None, "eta": None})
         await self._emit(d)
         try:
             found = await asyncio.to_thread(sniffer.sniff, d.url)
         except Exception as exc:
             return None, deque([f"ERROR: {NOTHING_FOUND} ({exc})"]), 1
-        db = SessionLocal.object_session(d)
-        if found.title and (not d.title or d.title == d.url):
-            d.title = found.title
-            db.commit()
-        allow_local = d.user.is_admin or app_settings.get(db, "allow_local_urls")
-        tail: deque[str] = deque([f"ERROR: {NOTHING_FOUND}"])
+        name_after(found.title)
         for media in found.candidates:
             if not allow_local and await is_local(media):
                 continue

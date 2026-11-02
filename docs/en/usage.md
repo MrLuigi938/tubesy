@@ -23,7 +23,13 @@ Paste a link on **Downloads** and click **Check**. Tubesy shows title, channel a
 
 YouTube, YouTube Music and more than 1000 other sites work – **Which sites are supported?** below the field lists all of them. Direct links to video or audio files always work.
 
-**Download anyway:** if the check fails (e.g. *Unsupported URL* or a timeout), the error box offers to queue the link anyway. Tubesy then tries yt-dlp once more, fetching the page like a browser – and if that does not work either, it **looks for the video on the page itself**: in `<video>` tags, `og:video` metadata and any `.m3u8`, `.mpd`, `.mp4` … address in the page and its scripts, also in embedded frames. What it finds is downloaded directly and named after the page. Only videos a page loads later via JavaScript cannot be found this way; then the queue says so.
+**Download anyway:** if the check fails (e.g. *Unsupported URL* or a timeout), the error box offers to queue the link anyway. Tubesy then goes step by step:
+
+1. **yt-dlp** once more, fetching the page like a browser.
+2. **A real browser:** Tubesy opens the page in a headless Chromium, starts the player (muted) and watches which streams (`.m3u8`, `.mpd`) or video files it loads – also in embedded players. The best one is downloaded with the browser's cookies and the page as referer. This finds videos that are only put together by JavaScript.
+3. **The page source:** `<video>` tags, `og:video` metadata and stream or file addresses in the page and its scripts – the fallback where no browser is available.
+
+The file is named after the page. The queue shows each step; if nothing is found, it says so. **DRM-protected streams** (Netflix, Disney+, Prime Video …) are encrypted and cannot be downloaded.
 
 ## Playlists and channels
 

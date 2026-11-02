@@ -19,7 +19,7 @@ Set them in front of the command, e.g. `CTID=120 IP=192.168.1.50/24 GATEWAY=192.
 |---|---|---|
 | `CTID` | next free ID | container ID |
 | `CT_HOSTNAME` | `tubesy` (asked) | name of the container |
-| `CORES` / `MEMORY` | `2` / `1024` | CPU cores, RAM in MB |
+| `CORES` / `MEMORY` | `2` / `2048` | CPU cores, RAM in MB (the browser for *Download anyway* likes 2 GB) |
 | `DISK` | `8` | disk size in GB – the downloads go here unless `HOST_DOWNLOADS` is set |
 | `STORAGE` | first container storage | where the disk is created |
 | `BRIDGE` | `vmbr0` | network bridge |

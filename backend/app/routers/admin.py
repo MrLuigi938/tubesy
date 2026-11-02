@@ -16,6 +16,7 @@ from ..security import hash_password, hash_token, new_token
 from ..services import settings as app_settings
 from ..services import ytdlp
 from ..services.downloads import download_dir_writable, manager, user_root
+from ..services import browser
 from ..services.events import hub
 from ..services.updates import checker
 from .auth import enforce_password_policy, user_out, validate_password, validate_username
@@ -246,6 +247,7 @@ async def system(db: Session = Depends(get_db)):
         "ytdlp_version": await ytdlp.version(),
         "ffmpeg": shutil.which("ffmpeg") is not None,
         "deno": shutil.which("deno") is not None,
+        "browser": browser.available(),
         "download_dir": str(config.DOWNLOAD_DIR),
         "download_dir_writable": download_dir_writable(),
         "disk_total": disk.total,

@@ -5,7 +5,7 @@
 #   sh proxmox-lxc.sh
 #
 # Options via environment variables (defaults in brackets):
-#   CTID (next free ID)  CT_HOSTNAME (tubesy)  CORES (2)  MEMORY (1024)
+#   CTID (next free ID)  CT_HOSTNAME (tubesy)  CORES (2)  MEMORY (2048)
 #   DISK (8, GB – downloads land here unless HOST_DOWNLOADS is set)
 #   STORAGE (first container storage)  BRIDGE (vmbr0)
 #   IP (dhcp, or e.g. 192.168.1.50/24)  GATEWAY (static IP only)
@@ -33,7 +33,7 @@ CT_HOSTNAME="${CT_HOSTNAME:-tubesy}"
 printf '%s' "$CT_HOSTNAME" | grep -Eq '^[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?$' ||
   die "invalid container name \"$CT_HOSTNAME\" – letters, digits and hyphens only (e.g. tubesy)"
 CORES="${CORES:-2}"
-MEMORY="${MEMORY:-1024}"
+MEMORY="${MEMORY:-2048}"
 DISK="${DISK:-8}"
 BRIDGE="${BRIDGE:-vmbr0}"
 IP="${IP:-dhcp}"

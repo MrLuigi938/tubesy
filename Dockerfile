@@ -30,6 +30,13 @@ COPY --from=ffmpeg /ffmpeg /ffprobe /usr/local/bin/
 # yt-dlp needs a JavaScript runtime to solve YouTube's player challenges.
 COPY --from=deno /deno /usr/local/bin/deno
 
+# Chromium for "Download anyway": a headless browser that watches the page play
+# its video and catches the stream (see backend/app/services/browser.py).
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends chromium fonts-liberation \
+ && rm -rf /var/lib/apt/lists/*
+ENV TUBESY_CHROMIUM=/usr/bin/chromium
+
 COPY backend/requirements.txt /app/requirements.txt
 RUN python -m venv /opt/venv \
  && pip install --no-cache-dir --disable-pip-version-check -r /app/requirements.txt
