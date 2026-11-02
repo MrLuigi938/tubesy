@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 from .. import config
 from ..database import SessionLocal
 from ..models import Download, User
-from . import browser, notify, sniffer
+from . import browser, lengths, notify, sniffer
 from . import settings as app_settings
 from .events import hub
 from .netcheck import is_local
@@ -381,6 +381,7 @@ class DownloadManager:
                 d.title = title
                 db.commit()
 
+        candidates: list[lengths.Candidate] = []
         # 1. A real browser plays the page and we watch which streams it loads.
         if browser.available():
             live.update({"stage": "Öffne die Seite im Browser", "speed": None, "eta": None})
@@ -392,32 +393,41 @@ class DownloadManager:
                 cap = None
             if cap is not None:
                 name_after(cap.title)
-                cookies = browser.write_cookies(cap.cookies, temp / "cookies.txt") if cap.cookies else None
-                for media in cap.media[:4]:
-                    log.info("Download %s: Browser hat %s geladen", d.id, media.url)
-                    live.update({"stage": "Download"})
-                    args = build_args(opts, home, temp, media.url, prefix, referer=d.url, title=d.title,
-                                      user_agent=cap.user_agent, cookies=cookies)
-                    output_file, tail, code = await self._attempt(d, args, temp, quota_left)
-                    if code == 0 and output_file:
-                        return output_file, tail, code
-                    if d.id in self._cancel_requested or d.id in self._over_quota:
-                        return None, tail, 1
+                candidates += [
+                    lengths.Candidate(m.url, m.referer or d.url, cap.user_agent, cap.cookies) for m in cap.media[:6]
+                ]
 
         # 2. The page source: video tags, og:video, stream addresses in scripts and iframes.
         live.update({"stage": "Suche Video auf der Seite", "speed": None, "eta": None})
         await self._emit(d)
         try:
             found = await asyncio.to_thread(sniffer.sniff, d.url)
+            name_after(found.title)
+            for media in found.candidates:
+                if allow_local or not await is_local(media):
+                    candidates.append(lengths.Candidate(media, d.url))
         except Exception as exc:
-            return None, deque([f"ERROR: {NOTHING_FOUND} ({exc})"]), 1
-        name_after(found.title)
-        for media in found.candidates:
-            if not allow_local and await is_local(media):
-                continue
-            log.info("Download %s: Video auf der Seite gefunden: %s", d.id, media)
+            log.warning("Download %s: Seite nicht lesbar: %s", d.id, exc)
+            if not candidates:
+                return None, deque([f"ERROR: {NOTHING_FOUND} ({exc})"]), 1
+
+        # 3. Measure them: ad clips and decoys must not win over the real video.
+        if candidates:
+            live.update({"stage": "Prüfe gefundene Videos"})
+            await self._emit(d)
+            candidates = await lengths.rank(candidates)
+        cookie_files: dict[int, Path] = {}
+        for c in candidates[:4]:
+            log.info("Download %s: versuche %s (%s s)", d.id, c.url, c.duration)
             live.update({"stage": "Download"})
-            args = build_args(opts, home, temp, media, prefix, referer=d.url, title=found.title)
+            cookies = None
+            if c.cookies:
+                key = id(c.cookies)
+                if key not in cookie_files:
+                    cookie_files[key] = browser.write_cookies(c.cookies, temp / f"cookies-{len(cookie_files)}.txt")
+                cookies = cookie_files[key]
+            args = build_args(opts, home, temp, c.url, prefix, referer=c.referer, title=d.title,
+                              user_agent=c.user_agent, cookies=cookies)
             output_file, tail, code = await self._attempt(d, args, temp, quota_left)
             if code == 0 and output_file:
                 return output_file, tail, code

@@ -48,6 +48,7 @@ class Media:
     url: str
     kind: str  # "stream" (HLS/DASH manifest) or "file"
     size: int | None = None
+    referer: str | None = None  # often the player's iframe, not the page itself
 
 
 @dataclass
@@ -123,6 +124,28 @@ async def _start_playback(page) -> None:
                 continue
 
 
+async def _click_player(page) -> None:
+    """A real mouse click into the player: many hosters only ask for the
+    stream after one (the first click often opens an ad – popups are closed)."""
+    target = None
+    for selector in ("video", "iframe"):
+        for element in await page.query_selector_all(selector):
+            try:
+                box = await element.bounding_box()
+            except Exception:
+                continue
+            if box and box["width"] >= 200 and box["height"] >= 120:
+                target = box
+                break
+        if target:
+            break
+    x, y = (target["x"] + target["width"] / 2, target["y"] + target["height"] / 2) if target else (640, 360)
+    try:
+        await page.mouse.click(x, y)
+    except Exception:
+        pass
+
+
 async def capture(url: str, is_blocked=None) -> Capture:
     """Opens the page, starts its player and returns the media it loaded.
 
@@ -135,10 +158,16 @@ async def capture(url: str, is_blocked=None) -> Capture:
         browser = await p.chromium.launch(
             executable_path=executable(),
             headless=True,
-            args=["--no-sandbox", "--disable-dev-shm-usage", "--autoplay-policy=no-user-gesture-required", "--mute-audio"],
+            args=["--no-sandbox", "--disable-dev-shm-usage", "--autoplay-policy=no-user-gesture-required",
+                  "--mute-audio", "--disable-blink-features=AutomationControlled"],
         )
         try:
-            context = await browser.new_context(viewport={"width": 1280, "height": 720}, locale="de-DE")
+            # "HeadlessChrome" in the user agent is the first thing bot checks look for.
+            agent = (await browser.new_page()).context
+            user_agent = (await agent.pages[0].evaluate("navigator.userAgent")).replace("HeadlessChrome", "Chrome")
+            await agent.close()
+            context = await browser.new_context(
+                viewport={"width": 1280, "height": 720}, locale="de-DE", user_agent=user_agent)
             if is_blocked is not None:
                 async def guard(route):
                     if await is_blocked(route.request.url):
@@ -151,14 +180,25 @@ async def capture(url: str, is_blocked=None) -> Capture:
             def on_response(response):
                 kind = _classify(response.url, (response.headers.get("content-type") or "").lower())
                 if kind and response.url not in found:
-                    found[response.url] = Media(response.url, kind, _size(response.headers))
+                    referer = response.request.headers.get("referer")
+                    found[response.url] = Media(response.url, kind, _size(response.headers), referer)
 
             context.on("response", on_response)
             page = await context.new_page()
+
+            def on_popup(popup):  # ad tabs opened by clicks into the player
+                if popup is not page:
+                    asyncio.ensure_future(popup.close())
+
+            context.on("page", on_popup)
             await page.goto(url, wait_until="domcontentloaded", timeout=30_000)
             deadline, seen_at = time.monotonic() + WAIT, None
+            rounds = 0
             while time.monotonic() < deadline:
                 await _start_playback(page)
+                if rounds % 2 == 1 and not best(found):
+                    await _click_player(page)
+                rounds += 1
                 await asyncio.sleep(1.5)
                 if any(m.kind == "stream" for m in found.values()) or best(found):
                     seen_at = seen_at or time.monotonic()

@@ -29,7 +29,9 @@ YouTube, YouTube Music and more than 1000 other sites work – **Which sites are
 2. **A real browser:** Tubesy opens the page in a headless Chromium, starts the player (muted) and watches which streams (`.m3u8`, `.mpd`) or video files it loads – also in embedded players. The best one is downloaded with the browser's cookies and the page as referer. This finds videos that are only put together by JavaScript.
 3. **The page source:** `<video>` tags, `og:video` metadata and stream or file addresses in the page and its scripts – the fallback where no browser is available.
 
-The file is named after the page. The queue shows each step; if nothing is found, it says so. **DRM-protected streams** (Netflix, Disney+, Prime Video …) are encrypted and cannot be downloaded.
+Before downloading, Tubesy **measures every video it found** and takes the longest – ad clips before the film and decoy videos in the page source lose out.
+
+The file is named after the page. The queue shows each step; if nothing is found, it says so. **DRM-protected streams** (Netflix, Disney+, Prime Video …) are encrypted and cannot be downloaded. Some hosters also lock out any download that does not come from a real person's browser (bot protection); Tubesy does not get around that.
 
 ## Playlists and channels
 

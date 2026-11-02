@@ -5,6 +5,7 @@ All notable changes to Tubesy. Versions follow [semantic versioning](https://sem
 ## [1.1.1]
 
 - Download anyway really forces it: if yt-dlp does not know the page, a headless Chromium (part of the image) opens it, starts the player and catches the stream it loads – also for videos put together by JavaScript; the page source (video tags, og:video, stream addresses, iframes) is searched as well; the file is named after the page
+- Download anyway no longer grabs ad clips or decoy videos: every video found is measured first and the longest one wins (a 30-minute episode no longer turns into a 39-second clip); the browser clicks into the player like a person, closes ad pop-ups and sends the player's own address as referer
 - Browser impersonation for yt-dlp (curl_cffi): sites that block plain requests, e.g. Vimeo or pages behind Cloudflare, work again
 - Account → App → *Check what is missing*: shows on the device itself whether HTTPS, manifest, icons and service worker are in place and whether the browser offers to install
 - Installing as an app behind a bot protection or login (Anubis, Authelia …): the manifest is requested with cookies, the check list detects a protection that redirects the app files, and the reverse-proxy guide has the rules to let them through

@@ -108,3 +108,38 @@ def test_browser_respects_the_local_address_guard(pages):
     cap = asyncio.run(browser.capture(pages["jsplayer"], media_blocked))
     assert cap.media == [] and cap.title == "JS Film"
 
+
+
+def test_the_longest_video_wins_over_ads_and_decoys(monkeypatch):
+    import asyncio
+
+    from app.services import lengths
+
+    durations = {
+        "https://cdn.example.com/ad.mp4": 39.0,
+        "https://cdn.example.com/film/master.m3u8": 1800.0,
+        "https://cdn.example.com/film/index.m3u8": 1800.4,
+        "https://test-videos.co.uk/vids/bigbuckbunny/mp4/Big_Buck_Bunny_10s.mp4": 10.0,
+        "https://cdn.example.com/protected.m3u8": None,
+    }
+
+    async def measure(c):
+        return durations[c.url]
+
+    monkeypatch.setattr(lengths, "measure", measure)
+    ranked = asyncio.run(lengths.rank([lengths.Candidate(u) for u in durations] + [lengths.Candidate("https://cdn.example.com/ad.mp4")]))
+    assert [c.url for c in ranked] == [
+        "https://cdn.example.com/film/master.m3u8",  # the master playlist keeps its place before its variant
+        "https://cdn.example.com/film/index.m3u8",
+        "https://cdn.example.com/protected.m3u8",  # unknown length: still worth a try
+        "https://cdn.example.com/ad.mp4",  # far shorter than the film
+        "https://test-videos.co.uk/vids/bigbuckbunny/mp4/Big_Buck_Bunny_10s.mp4",
+    ]
+
+
+def test_cookies_only_go_to_their_own_site():
+    from app.services import lengths
+
+    cookies = [{"name": "a", "value": "1", "domain": ".host.example"}, {"name": "b", "value": "2", "domain": "other.example"}]
+    assert lengths.cookie_header(cookies, "https://cdn.host.example/x.m3u8") == "a=1"
+    assert lengths.cookie_header(cookies, "https://evilhost.example/x.m3u8") == ""
